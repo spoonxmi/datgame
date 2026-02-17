@@ -395,9 +395,9 @@ function applyDamageToEnemy(enemy, damage) {
     } else {
         if (type === "protector") finalDamage *= 0.7;
         enemy.health -= finalDamage;
-    } else if (type === "drone") finalDamage *= 0.8; {  
+    } if (type === "drone") finalDamage *= 0.8; {  
         enemy.health -= finalDamage
-    } else if (type === "flame_drone") finalDamage *= 0.6; {
+    } if (type === "flame_drone") finalDamage *= 0.6; {
         enemy.health -= finalDamage
     }
     enemy.style.filter = "brightness(3)";
@@ -1252,6 +1252,7 @@ updateAttackBtns(); updateDefenseBtns(); updateEconomyUI(); updateRangeCircle();
 </body>
 
 </html>
+
 
 
 
