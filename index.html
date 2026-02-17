@@ -288,9 +288,9 @@ function spawnEnemy(forcedType = null, forcedX = null, forcedY = null) {
             type = "protector"; health = 150; speed = 0.5; damage = 3; size = 50;
         } else if (currentWave >= 12 && typeRand < 0.12) {
             const subRand = Math.random();
-            if (subRand < 0.3) { type = "flame_drone"; health = 200; speed = 1.6; damage = 5; size = 16; }
+            if (subRand < 0.3) { type = "flame_drone"; health = 600; speed = 1.6; damage = 5; size = 16; }
             else if (subRand < 0.65) { type = "splitter"; health = 100; speed = 1.2; damage = 5; size = 14; }
-            else { type = "drone"; health = 150; speed = 1.8; damage = 10; size = 15; }
+            else { type = "drone"; health = 300; speed = 1.8; damage = 10; size = 15; }
         } else if (currentWave <= 3) {
             if (typeRand < 0.95) { type="normal"; health=3; speed=1.2; damage=1; size=14; }
             else { type="fast"; health=2; speed=2.5; damage=3; size=12; }
@@ -1044,7 +1044,7 @@ function updateAttackBtns() {
     updateRangeCircle();
 }
 dmgBtn.addEventListener("click",()=>{ if(money>=costs.damage){ money-=costs.damage; towerDamage+=3.5; costs.damage*=1.2; updateEconomyUI(); }});
-rpmBtn.addEventListener("click",()=>{ if(money>=costs.rpm){ money-=costs.rpm; rpm+=12; costs.rpm*=1.4; updateEconomyUI(); }});
+rpmBtn.addEventListener("click",()=>{ if(money>=costs.rpm){ money-=costs.rpm; rpm+=12; costs.rpm*=1.2; updateEconomyUI(); }});
 rangeBtn.addEventListener("click",()=>{ if(money>=costs.range){ money-=costs.range; rangeRadius+=0.5; costs.range*=1.1; updateEconomyUI(); }});
 critChanceBtn.addEventListener("click",()=>{ if(money>=costs.critChance){ money-=costs.critChance; critChance+=1; costs.critChance*=1.5; updateEconomyUI(); }});
 critFactorBtn.addEventListener("click",()=>{ if(money>=costs.critFactor){ money-=costs.critFactor; critFactor+=0.1; costs.critFactor*=1.3; updateEconomyUI(); }});
@@ -1170,11 +1170,11 @@ window.updateWeaponUI = function() {
     if (!hasMortar) { mortarBuyBtn.textContent = "Buy Mortar: $1000, 75C, 15G"; mortarBuyBtn.disabled = (money < 1000 || coins < 75 || gems < 15); }
     else { 
         mortarBuyBtn.textContent = "MORTAR MENU (Toggle)"; 
-        morDmgBtn.textContent = `+25 Mortar Dmg ($${Math.floor(mortarCosts.dmg.m)}, ${mortarCosts.dmg.c}C) [${mortarDamage}]`;
+        morDmgBtn.textContent = `+25 Mortar Dmg ($${Math.floor(mortarCosts.dmg.m)}, ${Math.floor(mortarCosts.dmg.c)}C) [${mortarDamage}]`;
         morCdBtn.textContent = mortarCooldown <= 1000 ? "CD MAXED" : `-0.5s Cooldown ($${Math.floor(mortarCosts.cd.m)}, ${Math.floor(mortarCosts.cd.c)}C) [${(mortarCooldown/1000).toFixed(1)}s]`;
-        morExpBtn.textContent = `+25 Explosion Dmg ($${Math.floor(mortarCosts.exp.m)}, ${mortarCosts.exp.c}C) [${mortarExpDamage}]`;
+        morExpBtn.textContent = `+25 Explosion Dmg ($${Math.floor(mortarCosts.exp.m)}, ${Math.floor(mortarCosts.exp.c)}C) [${mortarExpDamage}]`;
         morSpdBtn.textContent = `Faster Speed ($${Math.floor(mortarCosts.spd.m)}, ${Math.floor(mortarCosts.spd.c)}C) [${(mortarSpeedFactor*100).toFixed(0)}]`;
-        morCountBtn.textContent = mortarCount >= 3 ? "CAP MAXED" : `+1 Mortar ($${Math.floor(mortarCosts.count.m)}, ${mortarCosts.count.c}C, ${mortarCosts.count.g}G) [${mortarCount}]`;
+        morCountBtn.textContent = mortarCount >= 3 ? "CAP MAXED" : `+1 Mortar ($${Math.floor(mortarCosts.count.m)}, ${Math.floor(mortarCosts.count.c)}C, ${mortarCosts.count.g}G) [${mortarCount}]`;
         
         if (!hasFlamingMortars) {
             morFlameBuyBtn.textContent = "Unlock Flaming Mortars (50 Gems)";
@@ -1183,7 +1183,7 @@ window.updateWeaponUI = function() {
         } else {
             morFlameBuyBtn.style.display = "none";
             morFlameChanceBtn.style.display = "block";
-            morFlameChanceBtn.textContent = `+1% Burn Chance ($${Math.floor(mortarCosts.flameChance.m)}, ${mortarCosts.flameChance.c}C, ${mortarCosts.flameChance.g}G) [${flamingMortarChance}%]`;
+            morFlameChanceBtn.textContent = `+1% Burn Chance ($${Math.floor(mortarCosts.flameChance.m)}, ${Math.floor(mortarCosts.flameChance.c)}C, ${Math.floor(mortarCosts.flameChance.g)}G) [${flamingMortarChance}%]`;
             morFlameChanceBtn.disabled = money < mortarCosts.flameChance.m || coins < mortarCosts.flameChance.c || gems < mortarCosts.flameChance.g;
         }
 
@@ -1233,7 +1233,7 @@ document.getElementById("statsBtn").addEventListener("click", () => {
         if (currentWave >= 5) content += `<br>Tank: ${s(40, 12, '9%')}`;
         if (currentWave >= 9) content += `<br>Ranged: ${s(20, 7, '5%')}`;
         if (currentWave >= 10) content += `<br>Boss: ${s(500, 50, '1%')}`;
-        if (currentWave >= 12) content += `<br>Splitter: HP 100 | DMG 5<br>Drone: HP 150 | DMG 10<br>Flame Drone: HP 200 | DMG 5 (Rapid)`;
+        if (currentWave >= 12) content += `<br>Splitter: HP 100 | DMG 5<br>Drone: HP 300 | DMG 10<br>Flame Drone: HP 600 | DMG 5 (Rapid)`;
         if (currentWave >= 15) content += `<br>Protector: HP 150/S 150`;
         statsMenu.innerHTML = content;
     }
@@ -1248,3 +1248,4 @@ updateAttackBtns(); updateDefenseBtns(); updateEconomyUI(); updateRangeCircle();
 </body>
 
 </html>
+
