@@ -1180,8 +1180,8 @@ window.updateWeaponUI = function() {
         morCountBtn.textContent = mortarCount >= 3 ? "CAP MAXED" : `+1 Mortar ($${Math.floor(mortarCosts.count.m)}, ${Math.floor(mortarCosts.count.c)}C, ${mortarCosts.count.g}G) [${mortarCount}]`;
         
         if (!hasFlamingMortars) {
-            morFlameBuyBtn.textContent = "Unlock Flaming Mortars (50 Gems)";
-            morFlameBuyBtn.disabled = gems < 50;
+            morFlameBuyBtn.textContent = "Unlock Flaming Mortars (20 Gems)";
+            morFlameBuyBtn.disabled = gems < 20;
             morFlameChanceBtn.style.display = "none";
         } else {
             morFlameBuyBtn.style.display = "none";
@@ -1252,6 +1252,7 @@ updateAttackBtns(); updateDefenseBtns(); updateEconomyUI(); updateRangeCircle();
 </body>
 
 </html>
+
 
 
 
