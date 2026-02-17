@@ -1173,7 +1173,7 @@ window.updateWeaponUI = function() {
         morDmgBtn.textContent = `+25 Mortar Dmg ($${Math.floor(mortarCosts.dmg.m)}, ${mortarCosts.dmg.c}C) [${mortarDamage}]`;
         morCdBtn.textContent = mortarCooldown <= 1000 ? "CD MAXED" : `-0.5s Cooldown ($${Math.floor(mortarCosts.cd.m)}, ${Math.floor(mortarCosts.cd.c)}C) [${(mortarCooldown/1000).toFixed(1)}s]`;
         morExpBtn.textContent = `+25 Explosion Dmg ($${Math.floor(mortarCosts.exp.m)}, ${mortarCosts.exp.c}C) [${mortarExpDamage}]`;
-        morSpdBtn.textContent = `Faster Speed ($${Math.floor(mortarCosts.spd.m)}, ${mortarCosts.spd.c}C) [${(mortarSpeedFactor*100).toFixed(0)}]`;
+        morSpdBtn.textContent = `Faster Speed ($${Math.floor(mortarCosts.spd.m)}, ${Math.floor(mortarCosts.spd.c)}C) [${(mortarSpeedFactor*100).toFixed(0)}]`;
         morCountBtn.textContent = mortarCount >= 3 ? "CAP MAXED" : `+1 Mortar ($${Math.floor(mortarCosts.count.m)}, ${mortarCosts.count.c}C, ${mortarCosts.count.g}G) [${mortarCount}]`;
         
         if (!hasFlamingMortars) {
@@ -1246,4 +1246,5 @@ requestAnimationFrame(updateShooting);
 updateAttackBtns(); updateDefenseBtns(); updateEconomyUI(); updateRangeCircle();
 </script>
 </body>
+
 </html>
