@@ -190,7 +190,7 @@ let missileSpeed = 2.2;
 let missileCooldown = 10000; 
 let lastMissileTime = 0;
 let missiles = [];
-let missileUpCosts = { dmg: {m: 40, c: 5}, cooldown: {m: 80, c: 10}, speed: {m: 80, c: 10}, count: {m: 250, c: 40, g: 3}, exp: {m: 150, c: 15, g: 1} };
+let missileUpCosts = { dmg: {m: 40, c: 5}, cooldown: {m: 80, c: 10}, speed: {m: 80, c: 10}, count: {m: 250, c: 40, g: 3}, exp: {m: 150, c: 15} };
 
 // Anti-Air System
 let hasAA = false;
@@ -395,8 +395,13 @@ function applyDamageToEnemy(enemy, damage) {
     } else {
         if (type === "protector") finalDamage *= 0.7;
         enemy.health -= finalDamage;
+    } else {
+        if (type === "drone") finalDamage *= 0.8;
+        enemy.health -= finalDamage
+    } else {
+        if (type === "flame_drone") finalDamage *= 0.6;
+        enemy.health -= finalDamage
     }
-
     enemy.style.filter = "brightness(3)";
     setTimeout(() => { if(enemy) enemy.style.filter = ""; }, 100);
     if (enemy.health <= 0) killEnemy(enemy);
@@ -1151,10 +1156,10 @@ window.updateWeaponUI = function() {
         mCdBtn.textContent = missileCooldown <= 1000 ? "CD MAXED" : `-0.5s Cooldown ($${Math.floor(missileUpCosts.cooldown.m)}, ${missileUpCosts.cooldown.c}C) [${(missileCooldown/1000).toFixed(1)}s]`;
         mSpdBtn.textContent = `+0.5 Speed ($${Math.floor(missileUpCosts.speed.m)}, ${missileUpCosts.speed.c}C) [${missileSpeed.toFixed(1)}]`;
         mCountBtn.textContent = missileCount >= 5 ? "COUNT MAXED" : `+1 Missile ($${Math.floor(missileUpCosts.count.m)}, ${missileUpCosts.count.c}C, ${missileUpCosts.count.g}G) [${missileCount}]`;
-        mExpBtn.textContent = `+25 Explosion Dmg ($${Math.floor(missileUpCosts.exp.m)}, ${missileUpCosts.exp.c}C, ${missileUpCosts.exp.g}G) [${missileExpDamage}]`;
+        mExpBtn.textContent = `+25 Explosion Dmg ($${Math.floor(missileUpCosts.exp.m)}, ${missileUpCosts.exp.c}C) [${missileExpDamage}]`;
         mDmgBtn.disabled = money < missileUpCosts.dmg.m || coins < missileUpCosts.dmg.c; mCdBtn.disabled = missileCooldown <= 1000 || money < missileUpCosts.cooldown.m || coins < missileUpCosts.cooldown.c;
         mSpdBtn.disabled = money < missileUpCosts.speed.m || coins < missileUpCosts.speed.c; mCountBtn.disabled = missileCount >= 5 || money < missileUpCosts.count.m || coins < missileUpCosts.count.c || gems < missileUpCosts.count.g;
-        mExpBtn.disabled = money < missileUpCosts.exp.m || coins < missileUpCosts.exp.c || gems < missileUpCosts.exp.g;
+        mExpBtn.disabled = money < missileUpCosts.exp.m || coins < missileUpCosts.exp.c
     }
     if (!hasAA) { aaBuyBtn.textContent = "Buy Anti-Air: $500, 10C"; aaBuyBtn.disabled = (money < 500 || coins < 10); }
     else {
@@ -1200,28 +1205,29 @@ missileBuyBtn.addEventListener("click", () => { if (!hasMissiles) { if (money >=
 aaBuyBtn.addEventListener("click", () => { if (!hasAA) { if (money >= 500 && coins >= 10) { money -= 500; coins -= 10; hasAA = true; aaTurret.style.display = "block"; updateAABarrels(); updateEconomyUI(); } } else { aaDropdown.style.display = aaDropdown.style.display === "none" ? "block" : "none"; } });
 mortarBuyBtn.addEventListener("click", () => { if (!hasMortar) { if (money >= 1000 && coins >= 75 && gems >= 15) { money -= 1000; coins -= 75; gems -= 15; hasMortar = true; mortarTurret.style.display = "block"; lastMortarShotTime = Date.now(); updateEconomyUI(); } } else { mortarDropdown.style.display = mortarDropdown.style.display === "none" ? "block" : "none"; } });
 
-morDmgBtn.addEventListener("click", () => { if(money >= mortarCosts.dmg.m && coins >= mortarCosts.dmg.c) { money -= mortarCosts.dmg.m; coins -= mortarCosts.dmg.c; mortarDamage += 25; mortarCosts.dmg.m *= 2.0; mortarCosts.dmg.c *= 1.8; updateEconomyUI(); }});
-morCdBtn.addEventListener("click", () => { if(mortarCooldown > 1000 && money >= mortarCosts.cd.m && coins >= mortarCosts.cd.c) { money -= mortarCosts.cd.m; coins -= mortarCosts.cd.c; mortarCooldown -= 500; mortarCosts.cd.m *= 1.4; mortarCosts.cd.c *= 1.3; updateEconomyUI(); }});
-morExpBtn.addEventListener("click", () => { if(money >= mortarCosts.exp.m && coins >= mortarCosts.exp.c) { money -= mortarCosts.exp.m; coins -= mortarCosts.exp.c; mortarExpDamage += 25; mortarCosts.exp.m *= 1.6; mortarCosts.exp.c *= 1.5; updateEconomyUI(); }});
+morDmgBtn.addEventListener("click", () => { if(money >= mortarCosts.dmg.m && coins >= mortarCosts.dmg.c) { money -= mortarCosts.dmg.m; coins -= mortarCosts.dmg.c; mortarDamage += 25; mortarCosts.dmg.m *= 1.4; mortarCosts.dmg.c *= 1.4; updateEconomyUI(); }});
+morCdBtn.addEventListener("click", () => { if(mortarCooldown > 1000 && money >= mortarCosts.cd.m && coins >= mortarCosts.cd.c) { money -= mortarCosts.cd.m; coins -= mortarCosts.cd.c; mortarCooldown -= 500; mortarCosts.cd.m *= 1.3; mortarCosts.cd.c *= 1.3; updateEconomyUI(); }});
+morExpBtn.addEventListener("click", () => { if(money >= mortarCosts.exp.m && coins >= mortarCosts.exp.c) { money -= mortarCosts.exp.m; coins -= mortarCosts.exp.c; mortarExpDamage += 25; mortarCosts.exp.m *= 1.4; mortarCosts.exp.c *= 1.4; updateEconomyUI(); }});
 morSpdBtn.addEventListener("click", () => { if(money >= mortarCosts.spd.m && coins >= mortarCosts.spd.c) { money -= mortarCosts.spd.m; coins -= mortarCosts.spd.c; mortarSpeedFactor += 0.005; mortarCosts.spd.m *= 1.4; mortarCosts.spd.c *= 1.4; updateEconomyUI(); }});
 morCountBtn.addEventListener("click", () => { if(mortarCount < 3 && money >= mortarCosts.count.m && coins >= mortarCosts.count.c && gems >= mortarCosts.count.g) { money -= mortarCosts.count.m; coins -= mortarCosts.count.c; gems -= mortarCosts.count.g; mortarCount++; mortarCosts.count.m *= 5.0; mortarCosts.count.c *= 3.5; mortarCosts.count.g *= 4.0; updateEconomyUI(); }});
-morFlameBuyBtn.addEventListener("click", () => { if (gems >= 50) { gems -= 50; hasFlamingMortars = true; flamingMortarChance = 1; updateEconomyUI(); }});
-morFlameChanceBtn.addEventListener("click", () => { if(money >= mortarCosts.flameChance.m && coins >= mortarCosts.flameChance.c && gems >= mortarCosts.flameChance.g) { money -= mortarCosts.flameChance.m; coins -= mortarCosts.flameChance.c; gems -= mortarCosts.flameChance.g; flamingMortarChance += 1; mortarCosts.flameChance.m *= 1.5; mortarCosts.flameChance.c *= 1.4; updateEconomyUI(); }});
+morFlameBuyBtn.addEventListener("click", () => { if (gems >= 20) { gems -= 20; hasFlamingMortars = true; flamingMortarChance = 5; updateEconomyUI(); }});
+morFlameChanceBtn.addEventListener("click", () => { if(money >= mortarCosts.flameChance.m && coins >= mortarCosts.flameChance.c && gems >= mortarCosts.flameChance.g) { money -= mortarCosts.flameChance.m; coins -= mortarCosts.flameChance.c; gems -= mortarCosts.flameChance.g; flamingMortarChance += 1; mortarCosts.flameChance.m *= 1.3; mortarCosts.flameChance.c *= 1.3; updateEconomyUI(); }});
 
-aaDmgBtn.addEventListener("click", () => { if(money >= aaCosts.dmg.m && coins >= aaCosts.dmg.c) { money -= aaCosts.dmg.m; coins -= aaCosts.dmg.c; aaDamage += 3; aaCosts.dmg.m *= 1.4; aaCosts.dmg.c += 2; updateEconomyUI(); }});
-aaRpmBtn.addEventListener("click", () => { if(money >= aaCosts.rpm.m && coins >= aaCosts.rpm.c) { money -= aaCosts.rpm.m; coins -= aaCosts.rpm.c; aaRPM += 12; aaCosts.rpm.m *= 1.6; aaCosts.rpm.c += 3; updateEconomyUI(); }});
+aaDmgBtn.addEventListener("click", () => { if(money >= aaCosts.dmg.m && coins >= aaCosts.dmg.c) { money -= aaCosts.dmg.m; coins -= aaCosts.dmg.c; aaDamage += 3; aaCosts.dmg.m *= 1.2; aaCosts.dmg.c += 2; updateEconomyUI(); }});
+aaRpmBtn.addEventListener("click", () => { if(money >= aaCosts.rpm.m && coins >= aaCosts.rpm.c) { money -= aaCosts.rpm.m; coins -= aaCosts.rpm.c; aaRPM += 12; aaCosts.rpm.m *= 1.2; aaCosts.rpm.c += 3; updateEconomyUI(); }});
 aaBarrelBtn.addEventListener("click", () => { if(aaBulletsPerShot < 4 && money >= aaCosts.barrel.m && coins >= aaCosts.barrel.c && gems >= aaCosts.barrel.g) { money -= aaCosts.barrel.m; coins -= aaCosts.barrel.c; gems -= aaCosts.barrel.g; aaBulletsPerShot++; updateAABarrels(); aaCosts.barrel.m *= 3.0; aaCosts.barrel.c *= 2; aaCosts.barrel.g *= 2; updateEconomyUI(); }});
-aaTurnBtn.addEventListener("click", () => { if(aaTurnRate > 0.1 && money >= aaCosts.turn.m && coins >= aaCosts.turn.c) { money -= aaCosts.turn.m; coins -= aaCosts.turn.c; aaTurnRate = Math.max(0.1, aaTurnRate - 0.2); aaCosts.turn.m *= 1.5; aaCosts.turn.c += 5; updateEconomyUI(); }});
+aaTurnBtn.addEventListener("click", () => { if(aaTurnRate > 0.1 && money >= aaCosts.turn.m && coins >= aaCosts.turn.c) { money -= aaCosts.turn.m; coins -= aaCosts.turn.c; aaTurnRate = Math.max(0.1, aaTurnRate - 0.2); aaCosts.turn.m *= 1.4; aaCosts.turn.c += 5; updateEconomyUI(); }});
 
-mDmgBtn.addEventListener("click", () => { if(money >= missileUpCosts.dmg.m && coins >= missileUpCosts.dmg.c) { money -= missileUpCosts.dmg.m; coins -= missileUpCosts.dmg.c; missileDamage += 10; missileUpCosts.dmg.m *= 1.8; missileUpCosts.dmg.c += 5; updateEconomyUI(); }});
-mCdBtn.addEventListener("click", () => { if(missileCooldown > 1000 && money >= missileUpCosts.cooldown.m && coins >= missileUpCosts.cooldown.c) { money -= missileUpCosts.cooldown.m; coins -= missileUpCosts.cooldown.c; missileCooldown -= 500; missileUpCosts.cooldown.m *= 2.0; missileUpCosts.cooldown.c += 10; updateEconomyUI(); }});
-mSpdBtn.addEventListener("click", () => { if(money >= missileUpCosts.speed.m && coins >= missileUpCosts.speed.c) { money -= missileUpCosts.speed.m; coins -= missileUpCosts.speed.c; missileSpeed += 0.5; missileUpCosts.speed.m *= 2.2; missileUpCosts.speed.c += 10; updateEconomyUI(); }});
-mCountBtn.addEventListener("click", () => { if(missileCount < 5 && money >= missileUpCosts.count.m && coins >= missileUpCosts.count.c && gems >= missileUpCosts.count.g) { money -= missileUpCosts.count.m; coins -= missileUpCosts.count.c; gems -= missileUpCosts.count.g; missileCount++; missileUpCosts.count.m *= 4.0; missileUpCosts.count.c *= 2; missileUpCosts.count.g *= 3; updateEconomyUI(); }});
-mExpBtn.addEventListener("click", () => { if(money >= missileUpCosts.exp.m && coins >= missileUpCosts.exp.c && gems >= missileUpCosts.exp.g) { money -= missileUpCosts.exp.m; coins -= missileUpCosts.exp.c; gems -= missileUpCosts.exp.g; missileExpDamage += 25; missileUpCosts.exp.m *= 2.5; missileUpCosts.exp.c += 15; missileUpCosts.exp.g += 2; updateEconomyUI(); }});
+mDmgBtn.addEventListener("click", () => { if(money >= missileUpCosts.dmg.m && coins >= missileUpCosts.dmg.c) { money -= missileUpCosts.dmg.m; coins -= missileUpCosts.dmg.c; missileDamage += 10; missileUpCosts.dmg.m *= 1.5; missileUpCosts.dmg.c += 5; updateEconomyUI(); }});
+mCdBtn.addEventListener("click", () => { if(missileCooldown > 1000 && money >= missileUpCosts.cooldown.m && coins >= missileUpCosts.cooldown.c) { money -= missileUpCosts.cooldown.m; coins -= missileUpCosts.cooldown.c; missileCooldown -= 500; missileUpCosts.cooldown.m *= 1.6; missileUpCosts.cooldown.c += 10; updateEconomyUI(); }});
+mSpdBtn.addEventListener("click", () => { if(money >= missileUpCosts.speed.m && coins >= missileUpCosts.speed.c) { money -= missileUpCosts.speed.m; coins -= missileUpCosts.speed.c; missileSpeed += 0.5; missileUpCosts.speed.m *= 1.8; missileUpCosts.speed.c += 10; updateEconomyUI(); }});
+mCountBtn.addEventListener("click", () => { if(missileCount < 5 && money >= missileUpCosts.count.m && coins >= missileUpCosts.count.c && gems >= missileUpCosts.count.g) { money -= missileUpCosts.count.m; coins -= missileUpCosts.count.c; gems -= missileUpCosts.count.g; missileCount++; missileUpCosts.count.m *= 3.5; missileUpCosts.count.c *= 2; missileUpCosts.count.g *= 3; updateEconomyUI(); }});
+mExpBtn.addEventListener("click", () => { if(money >= missileUpCosts.exp.m && coins >= missileUpCosts.exp.c) { money -= missileUpCosts.exp.m; coins -= missileUpCosts.exp.c; missileExpDamage += 25; missileUpCosts.exp.m *= 1.5; missileUpCosts.exp.c += 15; updateEconomyUI(); }});
+
 capBtn.addEventListener("click", () => { if (spikeCap < 5 && money >= spikeUpCosts.cap.m && coins >= spikeUpCosts.cap.c) { money -= spikeUpCosts.cap.m; coins -= spikeUpCosts.cap.c; spikeCap++; spikeUpCosts.cap.m *= 3; spikeUpCosts.cap.c *= 4; updateEconomyUI(); } });
-sDmgBtn.addEventListener("click", () => { if (money >= spikeUpCosts.dmg.m) { money -= spikeUpCosts.dmg.m; spikeDamage += 5; spikeUpCosts.dmg.m *= 1.6; updateEconomyUI(); } });
-spmBtn.addEventListener("click", () => { if (spikeCooldown > 250 && money >= spikeUpCosts.spm.m && coins >= spikeUpCosts.spm.c) { money -= spikeUpCosts.spm.m; coins -= spikeUpCosts.spm.c; spikeCooldown -= 250; spikeUpCosts.spm.m *= 1.8; spikeUpCosts.spm.c += 5; updateEconomyUI(); } });
-bChncBtn.addEventListener("click", () => { if (bleedChance === 0) { if (gems >= 10) { gems -= 10; bleedChance = 1; updateEconomyUI(); } } else { if (bleedChance < 0.99 && money >= spikeUpCosts.bleedchance.m && coins >= spikeUpCosts.bleedchance.c && gems >= 1) { money -= spikeUpCosts.bleedchance.m; coins -= spikeUpCosts.bleedchance.c; gems -= 1; spikeUpCosts.bleedchance.m *= 1.6; spikeUpCosts.bleedchance.c += 5; bleedChance++; updateEconomyUI(); } } });
+sDmgBtn.addEventListener("click", () => { if (money >= spikeUpCosts.dmg.m) { money -= spikeUpCosts.dmg.m; spikeDamage += 5; spikeUpCosts.dmg.m *= 1.3; updateEconomyUI(); } });
+spmBtn.addEventListener("click", () => { if (spikeCooldown > 250 && money >= spikeUpCosts.spm.m && coins >= spikeUpCosts.spm.c) { money -= spikeUpCosts.spm.m; coins -= spikeUpCosts.spm.c; spikeCooldown -= 250; spikeUpCosts.spm.m *= 1.5; spikeUpCosts.spm.c += 5; updateEconomyUI(); } });
+bChncBtn.addEventListener("click", () => { if (bleedChance === 0) { if (gems >= 10) { gems -= 10; bleedChance = 5; updateEconomyUI(); } } else { money >= spikeUpCosts.bleedchance.m && coins >= spikeUpCosts.bleedchance.c && gems >= 1) { money -= spikeUpCosts.bleedchance.m; coins -= spikeUpCosts.bleedchance.c; gems -= 1; spikeUpCosts.bleedchance.m *= 1.3; spikeUpCosts.bleedchance.c += 5; bleedChance++; updateEconomyUI(); } } });
 
 document.getElementById("statsBtn").addEventListener("click", () => {
     const isVisible = statsMenu.style.display === "block";
@@ -1233,7 +1239,7 @@ document.getElementById("statsBtn").addEventListener("click", () => {
         if (currentWave >= 5) content += `<br>Tank: ${s(40, 12, '9%')}`;
         if (currentWave >= 9) content += `<br>Ranged: ${s(20, 7, '5%')}`;
         if (currentWave >= 10) content += `<br>Boss: ${s(500, 50, '1%')}`;
-        if (currentWave >= 12) content += `<br>Splitter: HP 100 | DMG 5<br>Drone: HP 300 | DMG 10<br>Flame Drone: HP 600 | DMG 5 (Rapid)`;
+        if (currentWave >= 12) content += `<br>Splitter: HP 100, DMG 5, 35%, | <br>Drone: ${s(300, 10, '35%')} | <br>Flame Drone: ${s(600, 5, '30%')}`;
         if (currentWave >= 15) content += `<br>Protector: HP 200/S 500`;
         statsMenu.innerHTML = content;
     }
@@ -1248,6 +1254,7 @@ updateAttackBtns(); updateDefenseBtns(); updateEconomyUI(); updateRangeCircle();
 </body>
 
 </html>
+
 
 
 
