@@ -1225,7 +1225,7 @@ mExpBtn.addEventListener("click", () => { if(money >= missileUpCosts.exp.m && co
 capBtn.addEventListener("click", () => { if (spikeCap < 5 && money >= spikeUpCosts.cap.m && coins >= spikeUpCosts.cap.c) { money -= spikeUpCosts.cap.m; coins -= spikeUpCosts.cap.c; spikeCap++; spikeUpCosts.cap.m *= 3; spikeUpCosts.cap.c *= 4; updateEconomyUI(); } });
 sDmgBtn.addEventListener("click", () => { if (money >= spikeUpCosts.dmg.m) { money -= spikeUpCosts.dmg.m; spikeDamage += 5; spikeUpCosts.dmg.m *= 1.3; updateEconomyUI(); } });
 spmBtn.addEventListener("click", () => { if (spikeCooldown > 250 && money >= spikeUpCosts.spm.m && coins >= spikeUpCosts.spm.c) { money -= spikeUpCosts.spm.m; coins -= spikeUpCosts.spm.c; spikeCooldown -= 250; spikeUpCosts.spm.m *= 1.5; spikeUpCosts.spm.c += 5; updateEconomyUI(); } });
-bChncBtn.addEventListener("click", () => { if (bleedChance === 0) { if (gems >= 10) { gems -= 10; bleedChance = 5; updateEconomyUI(); } } else { money >= spikeUpCosts.bleedchance.m && coins >= spikeUpCosts.bleedchance.c && gems >= 1} { money -= spikeUpCosts.bleedchance.m; coins -= spikeUpCosts.bleedchance.c; gems -= 1; spikeUpCosts.bleedchance.m *= 1.3; spikeUpCosts.bleedchance.c += 5; bleedChance++; updateEconomyUI(); } } });
+bChncBtn.addEventListener("click", () => { if (bleedChance === 0) { if (gems >= 10) { gems -= 10; bleedChance = 5; updateEconomyUI(); } } else if (money >= spikeUpCosts.bleedchance.m && coins >= spikeUpCosts.bleedchance.c && gems >= 1) { money -= spikeUpCosts.bleedchance.m; coins -= spikeUpCosts.bleedchance.c; gems -= 1; spikeUpCosts.bleedchance.m *= 1.3; spikeUpCosts.bleedchance.c += 5; bleedChance++; updateEconomyUI(); } });
 
 document.getElementById("statsBtn").addEventListener("click", () => {
     const isVisible = statsMenu.style.display === "block";
@@ -1252,5 +1252,6 @@ updateAttackBtns(); updateDefenseBtns(); updateEconomyUI(); updateRangeCircle();
 </body>
 
 </html>
+
 
 
