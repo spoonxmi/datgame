@@ -179,13 +179,13 @@ let spikeCooldown = 5000;
 let bleedChance = 0;
 let bleedDamage = 5;
 let lastSpikeTime = 0;
-let spikeUpCosts = { cap: {m: 250, c: 1}, dmg: {m: 40}, spm: {m: 150, c: 5}, bleed: {g: 10}, bleedDmg: {m: 80, c: 5} };
+let spikeUpCosts = { cap: {m: 250, c: 1}, dmg: {m: 40}, spm: {m: 150, c: 5}, bleed: {g: 10}, bleedchance: {m: 100, c: 5, g: 1} bleedDmg: {m: 80, c: 5} };
 
 // Missile System
 let hasMissiles = false;
 let missileCount = 1;
-let missileDamage = 50;
-let missileExpDamage = 25;
+let missileDamage = 100;
+let missileExpDamage = 50;
 let missileSpeed = 2.2;
 let missileCooldown = 10000; 
 let lastMissileTime = 0;
@@ -285,7 +285,7 @@ function spawnEnemy(forcedType = null, forcedX = null, forcedY = null) {
         if (type === "mite") { health = 1; speed = 4.5; damage = 0.5; size = 6; }
     } else {
         if (currentWave >= 15 && typeRand < 0.03) {
-            type = "protector"; health = 150; speed = 0.5; damage = 3; size = 50;
+            type = "protector"; health = 500; speed = 0.5; damage = 3; size = 50;
         } else if (currentWave >= 12 && typeRand < 0.12) {
             const subRand = Math.random();
             if (subRand < 0.3) { type = "flame_drone"; health = 600; speed = 1.6; damage = 5; size = 16; }
@@ -327,7 +327,7 @@ function spawnEnemy(forcedType = null, forcedX = null, forcedY = null) {
     enemy.isIntercepter = (type === "tank" || type === "protector" || type === "splitter" || type === "drone") && Math.random() < 0.10;
 
     if (type === "protector") {
-        enemy.shieldHealth = 150; enemy.maxShieldHealth = 150;
+        enemy.shieldHealth = 200; enemy.maxShieldHealth = 200;
         enemy.lastShieldRegen = Date.now(); enemy.lastShieldCast = Date.now();
         const shieldVisual = document.createElement("div");
         shieldVisual.className = "protector-shield";
@@ -501,7 +501,7 @@ function updateEnemies() {
             if (mdist < 400) {
                 const moveSpeed = enemy.speed * 3.0;
                 enemy.style.left = (rect.left + (mdx/mdist) * moveSpeed)+"px";
-                enemy.style.top = (rect.top + (dy/dist) * moveSpeed)+"px";
+                enemy.style.top = (rect.top + (mdy/dist) * moveSpeed)+"px";
                 interceptionActive = true;
             }
         }
@@ -1055,7 +1055,7 @@ const defBtn = document.createElement("button"); defBtn.className="upgradeBtn"; 
 const thornBtn = document.createElement("button"); thornBtn.className="upgradeBtn"; thornBtn.dataset.type = "thorns"; menus.defense.appendChild(thornBtn);
 
 function updateDefenseBtns() {
-    regenBtn.textContent = `+0.13 Regen ($${Math.floor(costs.regen)}) [${healthRegen.toFixed(2)}]`;
+    regenBtn.textContent = `+1.00 Regen ($${Math.floor(costs.regen)}) [${healthRegen.toFixed(2)}]`;
     defBtn.textContent = (defensePercent >= 0.99) ? "DEFENSE MAXED" : `+1% Defense ($${Math.floor(costs.defense)}) [${(defensePercent*100).toFixed(0)}%]`;
     thornBtn.textContent = `+1% Thorns ($${Math.floor(costs.thorns)}) [${(thornsPercent*100).toFixed(0)}%]`;
 }
@@ -1139,10 +1139,10 @@ window.updateWeaponUI = function() {
         sDmgBtn.textContent = `+5 Spike Dmg ($${Math.floor(spikeUpCosts.dmg.m)}) [${spikeDamage}]`;
         spmBtn.textContent = `+SPM ($${Math.floor(spikeUpCosts.spm.m)}, ${spikeUpCosts.spm.c}C) [${(spikeCooldown/1000).toFixed(2)}s]`;
         if (bleedChance === 0) bChncBtn.textContent = `Unlock Bleed (10 Gems)`;
-        else bChncBtn.textContent = `+1% Bleed Chance ($${Math.floor(spikeUpCosts.bleed.m)}, ${spikeUpCosts.bleed.c}C, 1G) [${bleedChance}%]`;
+        else bChncBtn.textContent = `+1% Bleed Chance ($${Math.floor(spikeUpCosts.bleedchance.m)}, ${spikeUpCosts.bleedchance.c}C, 1G) [${bleedChance}%]`;
         capBtn.disabled = spikeCap >= 5 || money < spikeUpCosts.cap.m || coins < spikeUpCosts.cap.c; sDmgBtn.disabled = money < spikeUpCosts.dmg.m;
         spmBtn.disabled = spikeCooldown <= 250 || money < spikeUpCosts.spm.m || coins < spikeUpCosts.spm.c;
-        if (bleedChance === 0) bChncBtn.disabled = gems < 10; else bChncBtn.disabled = money < 200 || coins < 5 || gems < 1;
+        if (bleedChance === 0) bChncBtn.disabled = gems < 10; else bChncBtn.disabled = money < 100 || coins < 5 || gems < 1;
     }
     if (!hasMissiles) { missileBuyBtn.textContent = "Buy Missile: $1000, 100C, 10G"; missileBuyBtn.disabled = (money < 1000 || coins < 100 || gems < 10); }
     else {
@@ -1221,7 +1221,7 @@ mExpBtn.addEventListener("click", () => { if(money >= missileUpCosts.exp.m && co
 capBtn.addEventListener("click", () => { if (spikeCap < 5 && money >= spikeUpCosts.cap.m && coins >= spikeUpCosts.cap.c) { money -= spikeUpCosts.cap.m; coins -= spikeUpCosts.cap.c; spikeCap++; spikeUpCosts.cap.m *= 3; spikeUpCosts.cap.c *= 4; updateEconomyUI(); } });
 sDmgBtn.addEventListener("click", () => { if (money >= spikeUpCosts.dmg.m) { money -= spikeUpCosts.dmg.m; spikeDamage += 5; spikeUpCosts.dmg.m *= 1.6; updateEconomyUI(); } });
 spmBtn.addEventListener("click", () => { if (spikeCooldown > 250 && money >= spikeUpCosts.spm.m && coins >= spikeUpCosts.spm.c) { money -= spikeUpCosts.spm.m; coins -= spikeUpCosts.spm.c; spikeCooldown -= 250; spikeUpCosts.spm.m *= 1.8; spikeUpCosts.spm.c += 5; updateEconomyUI(); } });
-bChncBtn.addEventListener("click", () => { if (bleedChance === 0) { if (gems >= 10) { gems -= 10; bleedChance = 1; updateEconomyUI(); } } else { if (money >= 200 && coins >= 5 && gems >= 1) { money -= 200; coins -= 5; gems -= 1; bleedChance++; updateEconomyUI(); } } });
+bChncBtn.addEventListener("click", () => { if (bleedChance === 0) { if (gems >= 10) { gems -= 10; bleedChance = 1; updateEconomyUI(); } } else { if (money >= 100 && coins >= 5 && gems >= 1) { money -= spikeUpCosts.bleedchance.m; coins -= spikeUpCosts.bleedchance.c; gems -= 1; spikeUpCosts.bleedchance.m *= 1.6; spikeUpCosts.bleedchance.c += 5; bleedChance++; updateEconomyUI(); } } });
 
 document.getElementById("statsBtn").addEventListener("click", () => {
     const isVisible = statsMenu.style.display === "block";
@@ -1234,7 +1234,7 @@ document.getElementById("statsBtn").addEventListener("click", () => {
         if (currentWave >= 9) content += `<br>Ranged: ${s(20, 7, '5%')}`;
         if (currentWave >= 10) content += `<br>Boss: ${s(500, 50, '1%')}`;
         if (currentWave >= 12) content += `<br>Splitter: HP 100 | DMG 5<br>Drone: HP 300 | DMG 10<br>Flame Drone: HP 600 | DMG 5 (Rapid)`;
-        if (currentWave >= 15) content += `<br>Protector: HP 150/S 150`;
+        if (currentWave >= 15) content += `<br>Protector: HP 200/S 500`;
         statsMenu.innerHTML = content;
     }
 });
@@ -1248,5 +1248,3 @@ updateAttackBtns(); updateDefenseBtns(); updateEconomyUI(); updateRangeCircle();
 </body>
 
 </html>
-
-
