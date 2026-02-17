@@ -312,7 +312,7 @@ function spawnEnemy(forcedType = null, forcedX = null, forcedY = null) {
         }
     }
 
-    if (type !== "protector" && type !== "mite" && type !== "drone" && type !== "flame_drone") {
+    if (type !== "protector" && type !== "mite") {
         health *= waveScaling;
         damage *= waveScaling;
     }
@@ -1248,6 +1248,7 @@ updateAttackBtns(); updateDefenseBtns(); updateEconomyUI(); updateRangeCircle();
 </body>
 
 </html>
+
 
 
 
