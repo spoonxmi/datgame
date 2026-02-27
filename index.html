@@ -1,1258 +1,487 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Defend The Center - Mortar Upgrades</title>
-<style>
-    html, body {
-        margin: 0; padding: 0;
-        width: 100%; height: 100%;
-        background: #0c0f1a;
-        overflow: hidden;
-        font-family: 'Courier New', Courier, monospace;
-        color: white;
-    }
-    #game {
-        position: relative;
-        width: 100vw;
-        height: 100vh;
-        transition: transform 0.05s;
-    }
-    /* Top UI Areas */
-    #statsContainer { position: absolute; top: 10px; left: 10px; z-index: 100; }
-    #statsBtn { background: #333; color: white; border: 1px solid #777; padding: 5px 15px; cursor: pointer; font-weight: bold; }
-    #statsMenu { display: none; background: rgba(0, 0, 0, 0.9); border: 1px solid #555; padding: 10px; margin-top: 5px; font-size: 12px; width: 220px; line-height: 1.5; }
-    #waveUI { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); text-align: center; z-index: 50; }
-    #waveText { font-size: 24px; color: #ff4444; text-shadow: 0 0 10px red; }
-    #enemiesLeftText { font-size: 14px; color: #aaa; }
-    #currencyUI { position: absolute; top: 10px; right: 15px; text-align: right; font-size: 18px; font-weight: bold; z-index: 100; background: rgba(0, 0, 0, 0.7); padding: 10px; border-radius: 8px; border: 1px solid #444; }
-    #moneyText { color: #44ff44; } #coinsText { color: #ffff44; } #gemsText { color: #44ffff; }
-    
-    #rangeCircle { position: absolute; border-radius: 50%; background: rgba(200,200,200,0.05); border: 2px dashed rgba(200,200,200,0.2); top: 50%; left: 50%; transform: translate(-50%, -50%); pointer-events: none; }
-    
-    #towerContainer { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); display: flex; flex-direction: column; align-items: center; z-index: 5; }
-    #towerHealthBarWrapper { width: 100px; height: 12px; background: #333; border-radius: 6px; margin-bottom: 5px; position: relative; }
-    #towerHealthBar { height: 100%; background: cyan; border-radius: 6px; width: 100%; transition: background 0.2s; }
-    .burning-bar { background: #ff4500 !important; }
-    #towerHealthText { position: absolute; width: 100%; text-align: center; font-size: 10px; color: black; pointer-events: none; }
-    #tower { width: 80px; height: 80px; background: cyan; clip-path: polygon(25% 0%, 75% 0%, 100% 50%, 75% 100%, 25% 100%, 0% 50%); box-shadow: 0 0 15px cyan; display: flex; align-items: center; justify-content: center; position: relative; }
-    
-    #aaTurret { position: absolute; width: 34px; height: 34px; background: #222; border: 2px solid #555; border-radius: 50%; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 11; display: none; }
-    .aa-barrel { position: absolute; width: 18px; height: 5px; background: #000; border: 1px solid #444; left: 16px; top: 50%; transform-origin: left center; }
-    
-    #mortarTurret { position: absolute; width: 20px; height: 20px; background: #fff; border: 2px solid #aaa; border-radius: 50%; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 12; display: none; box-shadow: 0 0 10px white; }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Counting Laboratory - PERSISTENCE EDITION</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap');
+        
+        body {
+            background-color: #0f172a;
+            color: #e2e8f0;
+            font-family: 'JetBrains+Mono', monospace;
+            overflow-x: hidden;
+        }
 
-    .enemy { position: absolute; box-shadow: 0 0 6px; z-index: 3; }
-    .enemy.normal { background: red; box-shadow: 0 0 6px red; }
-    .enemy.fast { background: yellow; box-shadow: 0 0 6px yellow; }
-    .enemy.tank { background: orange; box-shadow: 0 0 8px orange; }
-    .enemy.boss { background: pink; box-shadow: inset 0 0 0 4px #ff1493; }
-    .enemy.ranged { background: blue; box-shadow: 0 0 6px blue; }
-    .enemy.protector { background: #00ff00; box-shadow: 0 0 10px #00ff00; border-radius: 50%; }
-    .enemy.splitter { background: #800080; box-shadow: 0 0 10px #800080; border-radius: 4px; }
-    .enemy.mite { background: #ff69b4; box-shadow: 0 0 4px #ff69b4; border-radius: 50%; }
-    .enemy.drone { background: white; box-shadow: 0 0 8px white; border: 1px solid #ccc; }
-    .enemy.flame_drone { background: #ff4500; box-shadow: 0 0 12px #ff0000; border: 2px solid #ffff00; }
-    
-    .protector-shield { position: absolute; border: 3px solid #00ff00; border-radius: 50%; pointer-events: none; box-shadow: 0 0 10px #00ff00; background: rgba(0, 255, 0, 0.1); z-index: 4; }
-    .fire-zone { position: absolute; border-radius: 50%; background: radial-gradient(circle, rgba(255,100,0,0.6) 0%, transparent 70%); pointer-events: none; z-index: 2; transform: translate(-50%, -50%); }
+        .chat-container::-webkit-scrollbar {
+            width: 6px;
+        }
+        .chat-container::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 10px;
+        }
 
-    .particle { position: absolute; pointer-events: none; border-radius: 50%; z-index: 10; }
-    .implosion-ring { position: absolute; border-radius: 50%; pointer-events: none; transform: translate(-50%, -50%); z-index: 9; }
-    #menu { position: absolute; bottom: 0; width: 100%; height: 70px; background: #111; display: flex; z-index: 20; }
-    .menuBtn { flex: 1; border: none; font-size: 16px; cursor: pointer; border-right: 1px solid #222; }
-    #attackBtn { background: #b30000; color: white; }
-    #defenseBtn { background: #0033cc; color: white; }
-    #utilityBtn { background: #666600; color: white; }
-    #weaponBtn { background: #660066; color: white; }
-    #exitBtn { background: black; color: white; }
-    .popupMenu { position: absolute; bottom: 70px; width: 320px; display: none; border-radius: 8px; padding: 15px; box-shadow: 0 0 15px #000; color: white; z-index: 25; max-height: 80vh; overflow-y: auto; }
-    .upgradeBtn { display: block; width: 100%; margin: 8px 0; font-size: 13px; padding: 8px; cursor: pointer; background: rgba(255,255,255,0.1); border: 1px solid white; color: white; border-radius: 4px; }
-    .upgradeBtn:disabled { opacity: 0.4; cursor: not-allowed; }
-    
-    .bullet { position: absolute; width: 6px; height: 6px; background: yellow; border-radius: 50%; z-index: 4; }
-    .bullet.crit { background: #ff0000; width: 8px; height: 8px; box-shadow: 0 0 10px red; }
-    .bullet.aa-bullet { background: #000; width: 5px; height: 5px; border: 1px solid #555; }
-    
-    .mortar-shell { position: absolute; width: 12px; height: 12px; background: #000; border-radius: 50%; z-index: 20; box-shadow: 0 0 5px black; }
-    .mortar-shell.flaming { background: #ff4500; box-shadow: 0 0 10px #ff0000, 0 0 20px #ffff00; }
+        .stat-card {
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid #334155;
+            position: relative;
+            overflow: hidden;
+        }
 
-    .enemyProjectile { position: absolute; width: 6px; height: 6px; background: lightblue; border-radius: 50%; z-index: 4; }
-    .enemyProjectile.fire { background: #ff4500; box-shadow: 0 0 5px orange; width: 8px; height: 8px; }
-    
-    .missile { position: absolute; width: 30px; height: 8px; background: linear-gradient(to right, #777 0%, #777 70%, #f00 70%, #f00 100%); border-radius: 2px; z-index: 10; transform-origin: center; }
-    .missile-trail { position: absolute; width: 4px; height: 4px; background: #ff5500; border-radius: 50%; pointer-events: none; z-index: 9; }
-    .explosion { position: absolute; border-radius: 50%; background: radial-gradient(circle, #ff0, #f00, transparent); pointer-events: none; z-index: 15; transform: translate(-50%, -50%); }
+        .ai-msg { border-left: 4px solid #38bdf8; }
+        .user-msg { border-left: 4px solid #fbbf24; }
+        .fail-msg { border-left: 4px solid #f87171; background: rgba(127, 29, 29, 0.6); }
+        .reaction-msg { border-left: 2px dashed #64748b; font-style: italic; font-size: 0.85rem; opacity: 0.8; }
+        .achievement-msg { border-left: 4px solid #fbbf24; background: rgba(251, 191, 36, 0.15); font-weight: bold; color: #fbbf24; }
+        
+        @keyframes shake {
+            0% { transform: translate(1px, 1px) rotate(0deg); }
+            10% { transform: translate(-1px, -2px) rotate(-1deg); }
+            20% { transform: translate(-3px, 0px) rotate(1deg); }
+            30% { transform: translate(3px, 2px) rotate(0deg); }
+            40% { transform: translate(1px, -1px) rotate(1deg); }
+            50% { transform: translate(-1px, 2px) rotate(-1deg); }
+            100% { transform: translate(0px, 0px) rotate(0deg); }
+        }
+        .screen-shake { animation: shake 0.2s; }
 
-    #bossHPContainer { position: absolute; top: 50px; left: 50%; transform: translateX(-50%); width: 300px; z-index: 20; }
-    .bossHPBarWrapper { width: 100%; background: #333; border-radius: 4px; height: 16px; margin-bottom: 5px; position: relative; }
-    .bossHPBar { height: 100%; border-radius: 4px; background: pink; }
-    .bossHPBar.protector-bar { background: #00ff00; }
-    .bossHPBar.shield-bar { background: #00ffff; }
-    .spike-fx { position: absolute; width: 20px; height: 40px; background: #cccccc; clip-path: polygon(50% 0%, 0% 100%, 100% 100%); z-index: 2; pointer-events: none; animation: spike-thrust 0.5s ease-out; }
-    @keyframes spike-thrust { 0% { transform: translate(-50%, 0) scaleY(0); opacity: 1; } 50% { transform: translate(-50%, -20px) scaleY(1); opacity: 1; } 100% { transform: translate(-50%, -20px) scaleY(1); opacity: 0; } }
-</style>
+        .btn-control {
+            transition: all 0.2s;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            font-weight: bold;
+        }
+        
+        .paused-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 50;
+            backdrop-filter: blur(2px);
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        .paused .paused-overlay { opacity: 1; }
+        
+        #saveIndicator {
+            position: fixed;
+            bottom: 1rem;
+            right: 1rem;
+            font-size: 0.6rem;
+            color: #64748b;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.5s;
+        }
+        .saving #saveIndicator { opacity: 1; }
+    </style>
 </head>
-<body>
-<div id="statsContainer">
-    <button id="statsBtn">STATS</button>
-    <div id="statsMenu"></div>
-</div>
-<div id="waveUI">
-    <div id="waveText">WAVE 1</div>
-    <div id="enemiesLeftText">Enemies: 0</div>
-</div>
-<div id="currencyUI">
-    <div id="moneyText">Money: $0</div>
-    <div id="coinsText">Coins: 0</div>
-    <div id="gemsText">Gems: 0</div>
-</div>
-<div id="game">
-    <div id="rangeCircle"></div>
-    <div id="towerContainer">
-        <div id="towerHealthBarWrapper">
-            <div id="towerHealthBar"></div>
-            <span id="towerHealthText"></span>
+<body class="p-2 md:p-6">
+    <div id="saveIndicator">SYNCING DATA...</div>
+    <div class="max-w-7xl mx-auto">
+        <header class="mb-4 text-center">
+            <h1 class="text-3xl font-bold text-rose-500 mb-1 tracking-widest uppercase">Chaos Counting Lab</h1>
+            <div class="flex justify-center gap-4 text-[10px] text-slate-500 font-bold">
+                <span>SPEED: MAX</span>
+                <span>STAKES: SCALED</span>
+                <span>AUTOSAVE: ACTIVE</span>
+            </div>
+        </header>
+
+        <!-- Player Controls -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+            <div class="stat-card p-3 rounded-lg flex items-center justify-between col-span-2 gap-2">
+                <button id="pauseBtn" class="btn-control bg-amber-600 hover:bg-amber-500 text-white px-3 py-2 rounded flex-1">Pause AI</button>
+                <button id="clearChatBtn" class="btn-control bg-sky-700 hover:bg-sky-600 text-white px-3 py-2 rounded flex-1">Clear Chat</button>
+                <button id="resetBtn" class="btn-control bg-slate-700 hover:bg-rose-600 text-white px-3 py-2 rounded flex-1">Hard Reset</button>
+            </div>
+            <div class="stat-card p-3 rounded-lg col-span-2 flex flex-col justify-center">
+                <div class="flex justify-between text-[10px] mb-1">
+                    <span class="text-amber-400 uppercase font-bold">Individual Achievement</span>
+                    <span id="lastIndivAch" class="text-white">None</span>
+                </div>
+                <div class="flex justify-between text-[10px]">
+                    <span class="text-sky-400 uppercase font-bold">Global Achievement</span>
+                    <span id="lastGlobalAch" class="text-white">None</span>
+                </div>
+            </div>
         </div>
-        <div id="tower">
-            <div id="aaTurret"></div>
-            <div id="mortarTurret"></div>
-        </div>
-    </div>
-    <div id="menu">
-        <button class="menuBtn" id="attackBtn">Attack</button>
-        <button class="menuBtn" id="defenseBtn">Defense</button>
-        <button class="menuBtn" id="utilityBtn">Utility</button>
-        <button class="menuBtn" id="weaponBtn">Weaponry</button>
-        <button class="menuBtn" id="exitBtn">Exit</button>
-    </div>
-    <div id="popupContainer"></div>
-    <div id="bossHPContainer"></div>
-</div>
 
-<script>
-const game = document.getElementById("game");
-const tower = document.getElementById("tower");
-const aaTurret = document.getElementById("aaTurret");
-const mortarTurret = document.getElementById("mortarTurret");
-const towerHealthBar = document.getElementById("towerHealthBar");
-const towerHealthText = document.getElementById("towerHealthText");
-const rangeCircle = document.getElementById("rangeCircle");
-const waveText = document.getElementById("waveText");
-const enemiesLeftText = document.getElementById("enemiesLeftText");
-const statsMenu = document.getElementById("statsMenu");
-const bossHPContainer = document.getElementById("bossHPContainer");
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-4">
+            <!-- Stats Column 1 -->
+            <div class="space-y-3">
+                <div class="stat-card p-3 rounded-lg border-rose-500/50">
+                    <p class="text-[10px] text-slate-500 uppercase font-bold">Current Number</p>
+                    <p id="currentNum" class="text-5xl font-black text-white">0</p>
+                </div>
+                <div class="stat-card p-3 rounded-lg">
+                    <p class="text-[10px] text-slate-500 uppercase font-bold">Peak Estimate</p>
+                    <p id="peakEstimate" class="text-xl font-bold text-emerald-400">10</p>
+                </div>
+                <div class="stat-card p-3 rounded-lg">
+                    <p class="text-[10px] text-slate-500 uppercase font-bold">Highest Counted</p>
+                    <p id="highestCount" class="text-xl font-bold text-sky-400">0</p>
+                </div>
+                <div class="stat-card p-3 rounded-lg">
+                    <p class="text-[10px] text-slate-500 uppercase font-bold">Average Run</p>
+                    <p id="averageCount" class="text-xl font-bold text-purple-400">0.0</p>
+                </div>
+            </div>
 
-// ----------------- GAME STATE -----------------
-let gameRunning = true;
-let towerMaxHealth = 10000;
-let towerHealth = 10000;
-let towerDamage = 5;
-let rpm = 120;
-let healthRegen = 0;
-let rangeRadius = 150;
-let defensePercent = 0; 
-let thornsPercent = 0;
-let towerBurnTime = 0;
+            <!-- Chat Area -->
+            <div id="chatWrapper" class="lg:col-span-2 flex flex-col h-[65vh] bg-slate-900 rounded-xl border-2 border-slate-800 overflow-hidden shadow-2xl relative">
+                <div class="paused-overlay text-amber-500 font-black text-2xl uppercase tracking-widest">AI Paused</div>
+                <div id="chatBox" class="chat-container flex-1 overflow-y-auto p-4 space-y-2">
+                    <div class="ai-msg p-2 bg-slate-800/50 rounded-r-lg">
+                        <span class="text-sky-400 font-bold">SYSTEM:</span> Progress is synced every 10 seconds. Memory survives page refreshes.
+                    </div>
+                </div>
+                <div class="p-3 bg-slate-800 border-t border-slate-700">
+                    <form id="chatForm" class="flex gap-2">
+                        <input type="number" id="userInput" placeholder="HIT IT!" 
+                               class="flex-1 bg-slate-950 border border-slate-700 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-rose-500 font-bold text-xl">
+                        <button type="submit" class="bg-rose-600 hover:bg-rose-500 text-white px-6 py-2 rounded font-black transition-all">
+                            SEND
+                        </button>
+                    </form>
+                </div>
+            </div>
 
-// Crits
-let critChance = 1; 
-let critFactor = 1.1;
-
-// Economy
-let money = 3000; let coins = 300; let gems = 50;
-let costs = { damage: 5, rpm: 10, range: 20, regen: 100, defense: 50, thorns: 30, critChance: 5, critFactor: 10 };
-
-// Wave System
-let currentWave = 1;
-let enemiesToSpawn = 0;
-let enemiesAlive = 0;
-let isWaveActive = false;
-let waveScaling = 1.0;
-
-// Spikes System
-let hasSpikes = false;
-let spikeCap = 1;
-let spikeDamage = 15;
-let spikeCooldown = 5000;
-let bleedChance = 0;
-let bleedDamage = 5;
-let lastSpikeTime = 0;
-let spikeUpCosts = { cap: {m: 250, c: 1}, dmg: {m: 40}, spm: {m: 150, c: 5}, bleed: {g: 10}, bleedchance: {m: 100, c: 5, g: 1}, bleedDmg: {m: 80, c: 5} };
-
-// Missile System
-let hasMissiles = false;
-let missileCount = 1;
-let missileDamage = 100;
-let missileExpDamage = 50;
-let missileSpeed = 2.2;
-let missileCooldown = 10000; 
-let lastMissileTime = 0;
-let missiles = [];
-let missileUpCosts = { dmg: {m: 40, c: 5}, cooldown: {m: 80, c: 10}, speed: {m: 80, c: 10}, count: {m: 250, c: 40, g: 3}, exp: {m: 150, c: 15} };
-
-// Anti-Air System
-let hasAA = false;
-let aaDamage = 5;
-let aaRPM = 500;
-let aaBulletsPerShot = 1;
-let aaTurnRate = 3; 
-let aaCurrentAngle = 0;
-let lastAAShotTime = 0;
-let aaCosts = { dmg: {m: 80, c: 5}, rpm: {m: 250, c: 10}, barrel: {m: 400, c: 15, g: 5}, turn: {m: 350, c: 10} };
-
-// Mortar System
-let hasMortar = false;
-let mortarDamage = 200;
-let mortarExpDamage = 50;
-let mortarCooldown = 12000;
-let mortarSpeedFactor = 0.01; // higher is faster
-let mortarCount = 1;
-let lastMortarShotTime = 0;
-let mortarShells = [];
-let hasFlamingMortars = false;
-let flamingMortarChance = 0; // percentage
-let mortarCosts = { 
-    dmg: {m: 500, c: 50}, 
-    cd: {m: 200, c: 20}, 
-    exp: {m: 300, c: 20}, 
-    spd: {m: 250, c: 20}, 
-    count: {m: 750, c: 50, g: 5},
-    flameChance: {m: 200, c: 10, g: 1}
-};
-
-const enemies = [];
-const bullets = [];
-const enemyProjectiles = [];
-const fireZones = [];
-const bossBars = new Map();
-
-// ----------------- CORE FUNCTIONS -----------------
-function createParticles(x, y, color, count, sizeRange, speedRange) {
-    for (let i = 0; i < count; i++) {
-        const p = document.createElement("div"); p.className = "particle";
-        const size = Math.random() * (sizeRange.max - sizeRange.min) + sizeRange.min;
-        const angle = Math.random() * Math.PI * 2;
-        const speed = Math.random() * (sizeRange.max - sizeRange.min) + sizeRange.min;
-        p.style.width = size + "px"; p.style.height = size + "px";
-        p.style.background = color; p.style.left = x + "px"; p.style.top = y + "px";
-        game.appendChild(p);
-        let opacity = 1; let curX = x; let curY = y;
-        const animateP = () => {
-            curX += Math.cos(angle) * speed; curY += Math.sin(angle) * speed; opacity -= 0.02;
-            p.style.left = curX + "px"; p.style.top = curY + "px"; p.style.opacity = opacity;
-            if (opacity > 0) requestAnimationFrame(animateP); else p.remove();
-        };
-        requestAnimationFrame(animateP);
-    }
-}
-
-function screenShake(intensity, duration) {
-    const startTime = Date.now();
-    const shake = () => {
-        const elapsed = Date.now() - startTime;
-        if (elapsed < duration) {
-            const x = (Math.random() - 0.5) * intensity;
-            const y = (Math.random() - 0.5) * intensity;
-            game.style.transform = `translate(${x}px, ${y}px)`;
-            requestAnimationFrame(shake);
-        } else { game.style.transform = `translate(0, 0)`; }
-    };
-    shake();
-}
-
-function startWave() {
-    isWaveActive = true;
-    enemiesToSpawn = Math.min(100, 10 + (currentWave * 5) + Math.floor(Math.random() * 10));
-    enemiesAlive = 0;
-    waveText.textContent = `WAVE ${currentWave}`;
-    if (currentWave > 10) waveScaling = 1.0 + (currentWave - 10) * 0.15;
-    const spawnInterval = setInterval(() => {
-        if (enemiesToSpawn > 0 && gameRunning) {
-            spawnEnemy();
-            enemiesToSpawn--;
-        } else { clearInterval(spawnInterval); }
-    }, 800 - Math.min(600, currentWave * 20));
-}
-
-function spawnEnemy(forcedType = null, forcedX = null, forcedY = null) {
-    const typeRand = Math.random();
-    let type, health, speed, damage, size;
-    
-    if (forcedType) {
-        type = forcedType;
-        if (type === "mite") { health = 1; speed = 4.5; damage = 0.5; size = 6; }
-    } else {
-        if (currentWave >= 15 && typeRand < 0.03) {
-            type = "protector"; health = 500; speed = 0.5; damage = 3; size = 50;
-        } else if (currentWave >= 12 && typeRand < 0.12) {
-            const subRand = Math.random();
-            if (subRand < 0.3) { type = "flame_drone"; health = 600; speed = 1.6; damage = 5; size = 16; }
-            else if (subRand < 0.65) { type = "splitter"; health = 100; speed = 1.2; damage = 5; size = 14; }
-            else { type = "drone"; health = 300; speed = 1.8; damage = 10; size = 15; }
-        } else if (currentWave <= 3) {
-            if (typeRand < 0.95) { type="normal"; health=3; speed=1.2; damage=1; size=14; }
-            else { type="fast"; health=2; speed=2.5; damage=3; size=12; }
-        } else if (currentWave <= 5) {
-            if (typeRand < 0.90) { type="normal"; health=3; speed=1.2; damage=1; size=14; }
-            else if (typeRand < 0.97) { type="fast"; health=2; speed=2.5; damage=3; size=12; }
-            else { type="tank"; health=40; speed=0.6; damage=12; size=22; }
-        } else if (currentWave <= 9) {
-            if (typeRand < 0.65) { type="normal"; health=3; speed=1.2; damage=1; size=14; }
-            else if (typeRand < 0.80) { type="fast"; health=2; speed=2.5; damage=3; size=12; }
-            else if (typeRand < 0.90) { type="tank"; health=40; speed=0.6; damage=12; size=22; }
-            else { type="ranged"; health=20; speed=1.2; damage=7; size=16; }
-        } else {
-            if (typeRand < 0.7) { type="normal"; health=3; speed=1.2; damage=1; size=14; }
-            else if (typeRand < 0.85) { type="fast"; health=2; speed=2.5; damage=3; size=12; }
-            else if (typeRand < 0.92) { type="tank"; health=40; speed=0.6; damage=12; size=22; }
-            else if (typeRand < 0.95) { type="ranged"; health=20; speed=1.2; damage=7; size=16; }
-            else { type="boss"; health=500; speed=0.35; damage=50; size=50; }
-        }
-    }
-
-    if (type !== "protector" && type !== "mite") {
-        health *= waveScaling;
-        damage *= waveScaling;
-    }
-
-    const enemy = document.createElement("div");
-    enemy.className = "enemy " + type;
-    enemy.health = health; enemy.maxHealth = health; enemy.speed = speed;
-    enemy.damage = damage; enemy.size = size; enemy.dataset.type = type;
-    enemy.style.width = size + "px"; enemy.style.height = size + "px";
-    enemy.burnTimer = 0;
-    
-    enemy.isIntercepter = (type === "tank" || type === "protector" || type === "splitter" || type === "drone") && Math.random() < 0.10;
-
-    if (type === "protector") {
-        enemy.shieldHealth = 200; enemy.maxShieldHealth = 200;
-        enemy.lastShieldRegen = Date.now(); enemy.lastShieldCast = Date.now();
-        const shieldVisual = document.createElement("div");
-        shieldVisual.className = "protector-shield";
-        shieldVisual.style.width = (size + 15) + "px"; shieldVisual.style.height = (size + 15) + "px";
-        shieldVisual.style.left = "-7.5px"; shieldVisual.style.top = "-7.5px";
-        enemy.appendChild(shieldVisual); enemy.shieldVisual = shieldVisual;
-        addBossBar(enemy, true);
-    }
-
-    let x, y;
-    if (forcedX !== null && forcedY !== null) {
-        x = forcedX; y = forcedY;
-    } else {
-        const edge = Math.floor(Math.random() * 4);
-        if (edge === 0) { x=Math.random()*window.innerWidth; y=-size; }
-        else if (edge === 1) { x=Math.random()*window.innerWidth; y=window.innerHeight+size; }
-        else if (edge === 2) { x=-size; y=Math.random()*window.innerHeight; }
-        else { x=window.innerWidth+size; y=Math.random()*window.innerHeight; }
-    }
-    
-    enemy.style.left=x+"px"; enemy.style.top=y+"px";
-    
-    if(type==="boss") addBossBar(enemy);
-    game.appendChild(enemy); 
-    enemies.push(enemy);
-    enemiesAlive++;
-    updateWaveUI();
-}
-
-function updateWaveUI() { enemiesLeftText.textContent = `Enemies Alive: ${enemiesAlive}`; }
-
-function checkWaveEnd() {
-    if (enemiesToSpawn === 0 && enemiesAlive === 0 && isWaveActive) {
-        isWaveActive = false;
-        money += (currentWave * 20);
-        currentWave++;
-        setTimeout(startWave, 3000);
-    }
-}
-
-// ----------------- TOWER & COMBAT -----------------
-function processTowerDamage(rawDamage, attacker = null) {
-    const reducedDamage = rawDamage * (1 - defensePercent);
-    towerHealth -= reducedDamage;
-    updateTowerHealthText();
-    if (thornsPercent > 0 && attacker && attacker.dataset.dead !== "true") {
-        const reflected = rawDamage * thornsPercent;
-        applyDamageToEnemy(attacker, reflected);
-    }
-    if (towerHealth <= 0) stopGame();
-}
-
-function applyDamageToEnemy(enemy, damage) {
-    if (enemy.dataset.dead === "true") return;
-    let finalDamage = damage;
-    const type = enemy.dataset.type;
-
-    if (enemy.shieldHealth > 0) {
-        finalDamage *= 0.5;
-        enemy.shieldHealth -= finalDamage;
-        if (enemy.shieldHealth <= 0) {
-            enemy.shieldHealth = 0;
-            if (enemy.shieldVisual) enemy.shieldVisual.style.transform = "scale(0)";
-        }
-    } else {
-        if (type === "protector") finalDamage *= 0.7;
-        enemy.health -= finalDamage;
-    } if (type === "drone") finalDamage *= 0.8; {  
-        enemy.health -= finalDamage
-    } if (type === "flame_drone") finalDamage *= 0.6; {
-        enemy.health -= finalDamage
-    }
-    enemy.style.filter = "brightness(3)";
-    setTimeout(() => { if(enemy) enemy.style.filter = ""; }, 100);
-    if (enemy.health <= 0) killEnemy(enemy);
-}
-
-function killEnemy(enemy) {
-    if (enemy.dataset.dead === "true") return;
-    const rect = enemy.getBoundingClientRect();
-    const ex = rect.left + rect.width/2;
-    const ey = rect.top + rect.height/2;
-    const type = enemy.dataset.type;
-
-    if (type === "tank" || type === "boss" || type === "protector" || type === "splitter" || type === "drone" || type === "flame_drone") {
-        handleComplexDeath(enemy, ex, ey, type);
-    } else {
-        const pColors = {normal: "red", fast: "yellow", ranged: "blue", mite: "#ff69b4"};
-        createParticles(ex, ey, pColors[type] || "white", 15, {min: 3, max: 5}, {min: 1, max: 5});
-        enemy.remove();
-        grantRewards(type);
-    }
-    enemiesAlive--;
-    updateWaveUI();
-    checkWaveEnd();
-}
-
-function updateEnemies() {
-    if (!gameRunning) return;
-    const towerRect = tower.getBoundingClientRect();
-    const tx = towerRect.left + towerRect.width/2;
-    const ty = towerRect.top + towerRect.height/2;
-    const now = Date.now();
-
-    enemies.forEach(enemy => {
-        if(!document.body.contains(enemy) || enemy.dataset.dead === "true") return;
-        
-        // Status Effects
-        if (enemy.bleedTimer > 0) {
-            enemy.bleedTimer -= 16;
-            if (!enemy.lastBleedTick || now - enemy.lastBleedTick >= 1000) {
-                applyDamageToEnemy(enemy, bleedDamage);
-                enemy.lastBleedTick = now;
-            }
-        }
-        if (enemy.burnTimer > 0) {
-            enemy.burnTimer -= 16;
-            const tickRate = enemy.isMortarBurned ? 500 : 500;
-            const tickDmg = enemy.isMortarBurned ? 5 : 1.5; // 10 DPS for mortar burn
-            if (!enemy.lastBurnTick || now - enemy.lastBurnTick >= tickRate) {
-                applyDamageToEnemy(enemy, tickDmg);
-                enemy.lastBurnTick = now;
-            }
-            enemy.style.filter = "sepia(1) saturate(5) hue-rotate(-20deg)";
-        } else {
-            if (enemy.bleedTimer <= 0) {
-                enemy.style.filter = "";
-                enemy.isMortarBurned = false;
-            }
-        }
-
-        const type = enemy.dataset.type;
-        const rect = enemy.getBoundingClientRect();
-        const ex = rect.left + rect.width/2;
-        const ey = rect.top + rect.height/2;
-
-        // Fire Zone Check
-        fireZones.forEach(fz => {
-            const dz = Math.sqrt((ex-fz.x)**2 + (ey-fz.y)**2);
-            if (dz < fz.radius) {
-                enemy.burnTimer = Math.max(enemy.burnTimer || 0, fz.isMortarFire ? 3000 : 3000);
-                if (fz.canBurnBase) {
-                    const dt = Math.sqrt((tx-fz.x)**2 + (ty-fz.y)**2);
-                    if (dt < fz.radius + towerRect.width/2) towerBurnTime = 3000;
-                }
-            }
-        });
-
-        if (type === "protector") {
-            if (enemy.shieldHealth < enemy.maxShieldHealth && now - enemy.lastShieldRegen >= 30000) {
-                enemy.shieldHealth = enemy.maxShieldHealth;
-                enemy.lastShieldRegen = now;
-                if (enemy.shieldVisual) enemy.shieldVisual.style.transform = "scale(1)";
-            }
-            if (now - enemy.lastShieldCast >= 10000) {
-                const priorityTarget = enemies
-                    .filter(e => e !== enemy && !e.shieldHealth && document.body.contains(e) && e.dataset.dead !== "true")
-                    .sort((a,b) => (b.health + b.damage) - (a.health + a.damage))[0];
-                if (priorityTarget) {
-                    priorityTarget.shieldHealth = 150; priorityTarget.maxShieldHealth = 150;
-                    const sv = document.createElement("div");
-                    sv.className = "protector-shield"; sv.style.width = (priorityTarget.size + 10) + "px"; sv.style.height = (priorityTarget.size + 10) + "px";
-                    sv.style.left = "-5px"; sv.style.top = "-5px";
-                    priorityTarget.appendChild(sv); priorityTarget.shieldVisual = sv;
-                    enemy.lastShieldCast = now;
-                }
-            }
-        }
-
-        let interceptionActive = false;
-        if (enemy.isIntercepter && missiles.length > 0) {
-            const m = missiles[0];
-            const mdx = m.x - ex; const mdy = m.y - ey; const mdist = Math.sqrt(mdx*mdx + mdy*mdy);
-            if (mdist < 400) {
-                const moveSpeed = enemy.speed * 3.0;
-                enemy.style.left = (rect.left + (mdx/mdist) * moveSpeed)+"px";
-                enemy.style.top = (rect.top + (mdy/mdist) * moveSpeed)+"px";
-                interceptionActive = true;
-            }
-        }
-
-        if (!interceptionActive) {
-            const dx = tx - ex; const dy = ty - ey; const dist = Math.sqrt(dx*dx + dy*dy);
-            if(type === "ranged" || type === "drone" || type === "flame_drone"){
-                if(dist > (type === "flame_drone" ? 80 : rangeRadius)){
-                    enemy.style.left = (rect.left + (dx/dist)*enemy.speed)+"px";
-                    enemy.style.top = (rect.top + (dy/dist)*enemy.speed)+"px";
-                } else {
-                    const shootRate = type === "flame_drone" ? 100 : 1500;
-                    if(!enemy.lastShotTime || now - enemy.lastShotTime > shootRate){
-                        shootEnemyProjectile(enemy); enemy.lastShotTime = now;
-                    }
-                }
-            } else {
-                if(dist > towerRect.width/2 + enemy.size/2){
-                    enemy.style.left = (rect.left + (dx/dist)*enemy.speed)+"px";
-                    enemy.style.top = (rect.top + (dy/dist)*enemy.speed)+"px";
-                } else if(!enemy.lastDamageTime || now - enemy.lastDamageTime >= 1000){
-                    processTowerDamage(enemy.damage, enemy);
-                    enemy.lastDamageTime = now;
-                }
-            }
-        }
-    });
-
-    // Fire Zones Life
-    fireZones.forEach((fz, idx) => {
-        fz.life -= 16;
-        if (fz.life <= 0) { fz.element.remove(); fireZones.splice(idx, 1); }
-    });
-
-    // Tower Burn
-    if (towerBurnTime > 0) {
-        towerBurnTime -= 16;
-        if (!window.lastTowerBurnTick || now - window.lastTowerBurnTick >= 1000) {
-            processTowerDamage(5);
-            window.lastTowerBurnTick = now;
-        }
-        towerHealthBar.classList.add('burning-bar');
-    } else {
-        towerHealthBar.classList.remove('burning-bar');
-    }
-
-    if (hasSpikes && now - lastSpikeTime > spikeCooldown) {
-        let sortedEnemies = [...enemies].filter(e => {
-            if (!document.body.contains(e) || e.dataset.dead === "true" || e.dataset.type === "drone" || e.dataset.type === "flame_drone") return false;
-            const rect = e.getBoundingClientRect();
-            const dist = Math.sqrt((tx-(rect.left+rect.width/2))**2 + (ty-(rect.top+rect.height/2))**2);
-            return dist <= rangeRadius + 100;
-        }).sort((a,b) => (b.health + b.damage) - (a.health + a.damage));
-        for (let i = 0; i < spikeCap && i < sortedEnemies.length; i++) triggerSpike(sortedEnemies[i]);
-        lastSpikeTime = now;
-    }
-
-    if (hasMissiles && now - lastMissileTime > missileCooldown) {
-        for(let i=0; i<missileCount; i++) setTimeout(() => launchMissile(tx, ty), i * 200);
-        lastMissileTime = now;
-    }
-    
-    if (hasMortar && now - lastMortarShotTime > mortarCooldown) {
-        // Multi-mortar launch with stagger
-        for(let m = 0; m < mortarCount; m++) {
-            setTimeout(() => {
-                if (gameRunning) launchMortar(tx, ty);
-            }, m * 500);
-        }
-        lastMortarShotTime = now;
-    }
-
-    if (hasAA) updateAATurret(tx, ty, now);
-
-    towerHealth = Math.min(towerMaxHealth, towerHealth + (healthRegen * 0.016));
-    updateTowerHealthText(); updateBossBars();
-    requestAnimationFrame(updateEnemies);
-}
-
-// ----------------- ANTI-AIR LOGIC -----------------
-function updateAATurret(tx, ty, now) {
-    let airTarget = [...enemies]
-        .filter(e => (e.dataset.type === "drone" || e.dataset.type === "flame_drone") && document.body.contains(e) && e.dataset.dead !== "true")
-        .sort((a,b) => {
-            const ar = a.getBoundingClientRect(); const br = b.getBoundingClientRect();
-            const da = Math.sqrt((tx-(ar.left+ar.width/2))**2 + (ty-(ar.top+ar.height/2))**2);
-            const db = Math.sqrt((tx-(br.left+br.width/2))**2 + (ty-(br.top+br.height/2))**2);
-            return da - db;
-        })[0];
-
-    if (airTarget) {
-        const dRect = airTarget.getBoundingClientRect();
-        const dx = (dRect.left + dRect.width/2) - tx;
-        const dy = (dRect.top + dRect.height/2) - ty;
-        const targetAngle = Math.atan2(dy, dx) * (180 / Math.PI);
-        const turnSpeed = (360 / aaTurnRate) * (16 / 1000);
-        let angleDiff = targetAngle - aaCurrentAngle;
-        while (angleDiff > 180) angleDiff -= 360;
-        while (angleDiff < -180) angleDiff += 360;
-
-        if (Math.abs(angleDiff) <= turnSpeed) aaCurrentAngle = targetAngle;
-        else aaCurrentAngle += Math.sign(angleDiff) * turnSpeed;
-
-        aaTurret.style.transform = `translate(-50%, -50%) rotate(${aaCurrentAngle}deg)`;
-
-        if (Math.abs(angleDiff) < 15 && now - lastAAShotTime > (60000 / aaRPM)) {
-            const rad = aaCurrentAngle * (Math.PI / 180);
-            const barrels = aaTurret.querySelectorAll('.aa-barrel');
-            barrels.forEach(barrel => {
-                const bRect = barrel.getBoundingClientRect();
-                const bX = bRect.left + bRect.width/2;
-                const bY = bRect.top + bRect.height/2;
-                fireAABullet(bX, bY, airTarget);
-            });
-            lastAAShotTime = now;
-        }
-    }
-}
-
-function fireAABullet(sx, sy, target) {
-    const b = document.createElement("div");
-    b.className = "bullet aa-bullet"; b.x = sx; b.y = sy; b.target = target; b.damage = aaDamage;
-    game.appendChild(b); bullets.push(b);
-}
-
-function updateAABarrels() {
-    aaTurret.innerHTML = '';
-    for (let i = 0; i < aaBulletsPerShot; i++) {
-        const barrel = document.createElement("div");
-        barrel.className = "aa-barrel";
-        const offset = (i - (aaBulletsPerShot - 1) / 2) * 8;
-        barrel.style.top = `calc(50% + ${offset}px)`;
-        aaTurret.appendChild(barrel);
-    }
-}
-
-// ----------------- MORTAR LOGIC -----------------
-function launchMortar(tx, ty) {
-    const target = [...enemies]
-        .filter(e => document.body.contains(e) && e.dataset.dead !== "true" && e.dataset.type !== "drone" && e.dataset.type !== "flame_drone")
-        .sort((a,b) => (b.health + b.damage) - (a.health + a.damage))[0];
-    
-    if (!target) return;
-    
-    const isFlaming = hasFlamingMortars && (Math.random() * 100 < flamingMortarChance);
-    
-    const shell = document.createElement("div");
-    shell.className = "mortar-shell" + (isFlaming ? " flaming" : "");
-    shell.x = tx; shell.y = ty;
-    shell.target = target;
-    shell.progress = 0;
-    shell.isFlaming = isFlaming;
-    
-    const targetRect = target.getBoundingClientRect();
-    shell.tx = targetRect.left + targetRect.width/2;
-    shell.ty = targetRect.top + targetRect.height/2;
-    
-    game.appendChild(shell);
-    mortarShells.push(shell);
-}
-
-function updateMortarShells() {
-    if (!gameRunning) return;
-    mortarShells.forEach((s, idx) => {
-        s.progress += mortarSpeedFactor;
-        
-        if (s.target && document.body.contains(s.target) && s.target.dataset.dead !== "true") {
-            const tr = s.target.getBoundingClientRect();
-            s.tx = tr.left + tr.width/2;
-            s.ty = tr.top + tr.height/2;
-        }
-
-        const startX = window.innerWidth / 2;
-        const startY = window.innerHeight / 2;
-        const curX = startX + (s.tx - startX) * s.progress;
-        const curY = startY + (s.ty - startY) * s.progress;
-        
-        const scale = 1 + Math.sin(s.progress * Math.PI) * 3;
-        
-        s.style.left = curX + "px";
-        s.style.top = curY + "px";
-        s.style.transform = `translate(-50%, -50%) scale(${scale})`;
-
-        if (s.progress >= 1) {
-            explodeMortar(s);
-            mortarShells.splice(idx, 1);
-        }
-    });
-    requestAnimationFrame(updateMortarShells);
-}
-
-function explodeMortar(s) {
-    const ex = s.tx; const ey = s.ty; s.remove();
-    const multiplier = s.isFlaming ? 2 : 1;
-    
-    // Impact damage
-    if (s.target && document.body.contains(s.target) && s.target.dataset.dead !== "true") {
-        applyDamageToEnemy(s.target, mortarDamage * multiplier);
-        if (s.isFlaming) {
-            s.target.burnTimer = 5000;
-            s.target.isMortarBurned = true;
-        }
-    }
-
-    const exp = document.createElement("div"); exp.className = "explosion";
-    exp.style.left = ex + "px"; exp.style.top = ey + "px"; exp.style.width = "0px"; exp.style.height = "0px";
-    if (s.isFlaming) {
-        exp.style.background = "radial-gradient(circle, #fff, #ff0, #ff4500, transparent)";
-    } else {
-        exp.style.background = "radial-gradient(circle, #fff, #333, transparent)";
-    }
-    game.appendChild(exp);
-    
-    let size = 0;
-    const limit = s.isFlaming ? 240 : 180;
-    const animExp = () => {
-        size += 12; exp.style.width = size + "px"; exp.style.height = size + "px"; exp.style.opacity = 1 - (size/limit);
-        if (size < limit) requestAnimationFrame(animExp); else exp.remove();
-    };
-    animExp();
-    
-    screenShake(s.isFlaming ? 18 : 12, s.isFlaming ? 500 : 400);
-    
-    enemies.forEach(e => {
-        if (!document.body.contains(e) || e.dataset.dead === "true") return;
-        const er = e.getBoundingClientRect();
-        const dist = Math.sqrt((ex-(er.left+er.width/2))**2 + (ey-(er.top+er.height/2))**2);
-        if (dist < (s.isFlaming ? 120 : 90)) {
-            applyDamageToEnemy(e, mortarExpDamage * multiplier);
-            if (s.isFlaming) {
-                e.burnTimer = 5000;
-                e.isMortarBurned = true;
-            }
-        }
-    });
-
-    if (s.isFlaming) {
-        const fElement = document.createElement("div");
-        fElement.className = "fire-zone"; fElement.style.left = ex + "px"; fElement.style.top = ey + "px";
-        fElement.style.width = "200px"; fElement.style.height = "200px";
-        game.appendChild(fElement);
-        fireZones.push({ 
-            element: fElement, x: ex, y: ey, radius: 100, life: 5000, 
-            canBurnBase: true, isMortarFire: true 
-        });
-    }
-}
-
-// ----------------- MISSILE LOGIC -----------------
-function launchMissile(tx, ty) {
-    const target = [...enemies].filter(e => document.body.contains(e) && e.dataset.dead !== "true").sort((a,b) => (b.health + b.damage) - (a.health + a.damage))[0];
-    if (!target) return;
-    const m = document.createElement("div");
-    m.className = "missile"; m.x = tx; m.y = ty; m.target = target; m.vx = 0; m.vy = 0;
-    game.appendChild(m); missiles.push(m);
-}
-
-function updateMissiles() {
-    if (!gameRunning) return;
-    missiles.forEach((m, idx) => {
-        if (!m.target || !document.body.contains(m.target) || m.target.dataset.dead === "true") {
-            m.target = [...enemies].filter(e => document.body.contains(e) && e.dataset.dead !== "true").sort((a,b) => (b.health + b.damage) - (a.health + a.damage))[0];
-        }
-        if (m.target) {
-            const rect = m.target.getBoundingClientRect();
-            const tx = rect.left + rect.width/2; const ty = rect.top + rect.height/2;
-            const dx = tx - m.x; const dy = ty - m.y;
-            const targetAngle = Math.atan2(dy, dx);
-            const currentAngle = Math.atan2(m.vy, m.vx) || targetAngle;
-            const diff = targetAngle - currentAngle;
-            const newAngle = currentAngle + (Math.sin(diff) * 0.08);
-            m.vx = Math.cos(newAngle) * missileSpeed; m.vy = Math.sin(newAngle) * missileSpeed;
-            m.x += m.vx; m.y += m.vy;
-            m.style.left = m.x + "px"; m.style.top = m.y + "px";
-            m.style.transform = `translate(-50%, -50%) rotate(${newAngle}rad)`;
-            if (Math.random() > 0.4) {
-                const t = document.createElement("div"); t.className = "missile-trail";
-                t.style.left = (m.x - Math.cos(newAngle) * 15) + "px"; t.style.top = (m.y - Math.sin(newAngle) * 15) + "px";
-                game.appendChild(t);
-                let op = 1; const animT = () => { op -= 0.05; t.style.opacity = op; if(op > 0) requestAnimationFrame(animT); else t.remove(); };
-                animT();
-            }
-            let hitEnemy = null;
-            for (let e of enemies) {
-                if (!document.body.contains(e) || e.dataset.dead === "true") continue;
-                const er = e.getBoundingClientRect();
-                const d = Math.sqrt((m.x-(er.left+er.width/2))**2 + (m.y-(er.top+er.height/2))**2);
-                if (d < e.size/2 + 5) { hitEnemy = e; break; }
-            }
-            if (hitEnemy) { explodeMissile(m, hitEnemy); missiles.splice(idx, 1); }
-        } else {
-            m.x += m.vx || missileSpeed; m.y += m.vy || 0;
-            m.style.left = m.x + "px"; m.style.top = m.y + "px";
-            if (m.x < 0 || m.x > window.innerWidth || m.y < 0 || m.y > window.innerHeight) { m.remove(); missiles.splice(idx, 1); }
-        }
-    });
-    requestAnimationFrame(updateMissiles);
-}
-
-function explodeMissile(m, hitEnemy) {
-    const ex = m.x; const ey = m.y; m.remove();
-    applyDamageToEnemy(hitEnemy, missileDamage);
-    const exp = document.createElement("div"); exp.className = "explosion";
-    exp.style.left = ex + "px"; exp.style.top = ey + "px"; exp.style.width = "0px"; exp.style.height = "0px";
-    game.appendChild(exp);
-    let size = 0;
-    const animExp = () => {
-        size += 8; exp.style.width = size + "px"; exp.style.height = size + "px"; exp.style.opacity = 1 - (size/120);
-        if (size < 120) requestAnimationFrame(animExp); else exp.remove();
-    };
-    animExp();
-    screenShake(8, 200);
-    enemies.forEach(e => {
-        if (!document.body.contains(e) || e.dataset.dead === "true" || e === hitEnemy) return;
-        const er = e.getBoundingClientRect();
-        const dist = Math.sqrt((ex-(er.left+er.width/2))**2 + (ey-(er.top+er.height/2))**2);
-        if (dist < 60) applyDamageToEnemy(e, missileExpDamage);
-    });
-}
-
-// ----------------- VISUALS & BULLETS -----------------
-function triggerSpike(target) {
-    const rect = target.getBoundingClientRect();
-    const fx = document.createElement("div"); fx.className = "spike-fx";
-    fx.style.left = (rect.left + rect.width/2) + "px"; fx.style.top = (rect.top + rect.height/2) + "px";
-    game.appendChild(fx);
-    applyDamageToEnemy(target, spikeDamage);
-    if (Math.random() * 100 < bleedChance) { target.bleedTimer = 5000; }
-    setTimeout(() => fx.remove(), 500);
-}
-
-function updateEnemyProjectiles(){
-    if(!gameRunning) return;
-    const towerRect = tower.getBoundingClientRect();
-    const tx = towerRect.left + towerRect.width/2; const ty = towerRect.top + towerRect.height/2;
-    enemyProjectiles.forEach((p,i)=>{
-        const dx = tx - p.x; const dy = ty - p.y; const dist = Math.sqrt(dx*dx + dy*dy);
-        if(dist < 10){ 
-            processTowerDamage(p.damage); 
-            if (p.classList.contains('fire')) towerBurnTime = 3000;
-            p.remove(); enemyProjectiles.splice(i,1); return; 
-        }
-        p.x += (dx/dist)*2.5; p.y += (dy/dist)*2.5;
-        p.style.left = p.x+"px"; p.style.top = p.y+"px";
-    });
-    requestAnimationFrame(updateEnemyProjectiles);
-}
-
-function updateTowerHealthText() {
-    towerHealthBar.style.width = (towerHealth/towerMaxHealth*100) + "%";
-    towerHealthText.textContent = Math.floor(towerHealth) + "/" + towerMaxHealth;
-}
-
-function updateRangeCircle() {
-    rangeCircle.style.width = (rangeRadius * 2) + "px";
-    rangeCircle.style.height = (rangeRadius * 2) + "px";
-}
-
-function grantRewards(type) {
-    const rewards = { 
-        normal: { m: 1, c: 0, g: 0 }, fast: { m: 2, c: 1, g: 0 }, ranged: { m: 8, c: 3, g: 0 }, 
-        tank: { m: 15, c: 5, g: 0.1 }, boss: { m: 300, c: 30, g: 5 }, protector: { m: 200, c: 50, g: 2 },
-        splitter: { m: 20, c: 3, g: 0 }, mite: { m: 1, c: 0, g: 0 }, drone: { m: 30, c: 7, g: 1 },
-        flame_drone: { m: 60, c: 20, g: 2 }
-    };
-    const r = rewards[type]; if (!r) return;
-    money += r.m; coins += r.c;
-    if (type === 'tank') { if (Math.random() < 0.1) gems += 1; } else { gems += r.g; }
-    updateEconomyUI();
-}
-
-function handleComplexDeath(enemy, x, y, type) {
-    enemy.dataset.dead = "true";
-    const isBoss = type === "boss"; const isProtector = type === "protector";
-    const isSplitter = type === "splitter"; const isDrone = type === "drone" || type === "flame_drone";
-    const isFlame = type === "flame_drone";
-    const duration = isBoss ? 2000 : (isProtector ? 1200 : (isDrone ? 800 : 600));
-    const color = isFlame ? "#ff4500" : (isBoss ? "pink" : (isProtector ? "#00ff00" : (isSplitter ? "#800080" : (isDrone ? "white" : "orange"))));
-    
-    const ring = document.createElement("div");
-    ring.className = "implosion-ring"; ring.style.border = `3px solid ${color}`;
-    ring.style.left = x + "px"; ring.style.top = y + "px";
-    let ringSize = (isBoss || isProtector) ? 150 : 80;
-    ring.style.width = ringSize + "px"; ring.style.height = ringSize + "px";
-    game.appendChild(ring);
-    
-    const step = ringSize / (duration / 20);
-    const shrink = setInterval(() => {
-        ringSize -= step;
-        if(ringSize <= 0) {
-            clearInterval(shrink); ring.remove(); enemy.remove();
-            let shakePower = 4;
-            if (isBoss) shakePower = 15; else if (isProtector) shakePower = 8; else if (isSplitter || isDrone) shakePower = 6;
-            screenShake(shakePower, isBoss ? 500 : 300);
-            createParticles(x, y, color, isBoss ? 80 : 35, {min: 5, max: 12}, {min: 2, max: isBoss ? 10 : 6});
-            
-            if (isSplitter) { const miteCount = 3 + Math.floor(Math.random() * 3); for(let i=0; i<miteCount; i++) spawnEnemy("mite", x, y); }
-            if (isDrone) {
-                const exp = document.createElement("div"); exp.className = "explosion";
-                exp.style.left = x + "px"; exp.style.top = y + "px"; exp.style.width = "0px"; exp.style.height = "0px";
-                if (isFlame) exp.style.background = "radial-gradient(circle, #ff0, #ff4500, transparent)";
-                game.appendChild(exp);
-                let dSize = 0; const dLimit = isFlame ? 250 : 200;
-                const dAnim = () => {
-                    dSize += 10; exp.style.width = dSize + "px"; exp.style.height = dSize + "px"; exp.style.opacity = 1 - (dSize/dLimit);
-                    if (dSize < dLimit) requestAnimationFrame(dAnim); else exp.remove();
-                };
-                dAnim();
-                enemies.forEach(e => {
-                    if (!document.body.contains(e) || e.dataset.dead === "true" || e === enemy) return;
-                    const er = e.getBoundingClientRect();
-                    const dist = Math.sqrt((x-(er.left+er.width/2))**2 + (y-(er.top+er.height/2))**2);
-                    if (dist < 100) applyDamageToEnemy(e, 50);
-                });
-                const towerRect = tower.getBoundingClientRect();
-                const tDist = Math.sqrt((x-(towerRect.left+towerRect.width/2))**2 + (y-(towerRect.top+towerRect.height/2))**2);
-                if (tDist < 100) processTowerDamage(25);
+            <!-- Stats Column 2 -->
+            <div class="space-y-3">
+                <div class="stat-card p-3 rounded-lg border-amber-500/30">
+                    <p class="text-[10px] text-slate-500 uppercase font-bold">Smartest AI</p>
+                    <p id="smartestAi" class="text-xl font-bold text-emerald-400">Loading...</p>
+                </div>
+                <div class="stat-card p-3 rounded-lg border-rose-500/30">
+                    <p class="text-[10px] text-slate-500 uppercase font-bold">Dumbest AI</p>
+                    <p id="dumbestAi" class="text-xl font-bold text-rose-400">Loading...</p>
+                </div>
+                <div class="stat-card p-3 rounded-lg">
+                    <p class="text-[10px] text-slate-500 uppercase font-bold">Messed Up Most</p>
+                    <p id="worstAi" class="text-xl font-bold text-amber-500">None</p>
+                </div>
                 
-                if (isFlame) {
-                    const fElement = document.createElement("div");
-                    fElement.className = "fire-zone"; fElement.style.left = x + "px"; fElement.style.top = y + "px";
-                    fElement.style.width = "160px"; fElement.style.height = "160px";
-                    game.appendChild(fElement);
-                    fireZones.push({ element: fElement, x, y, radius: 80, life: 10000, canBurnBase: true });
+                <div class="p-2 bg-slate-800/50 rounded border border-slate-700 text-[9px] h-48 overflow-y-auto" id="levelDash">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentNumber = 0;
+        let isPaused = false;
+        let stats = {
+            highest: 0,
+            lowest: Infinity,
+            totalRuns: 0,
+            sumOfFinals: 0,
+            mistakes: Array(11).fill(0),
+            peakEstimate: 10
+        };
+
+        const globalMilestones = [25, 50, 100, 250, 500, 1000, 2500, 5000, 10000, 25000, 50000, 100000];
+        let agents = [];
+
+        function initAgents() {
+            agents = Array.from({ length: 10 }, (_, i) => ({
+                id: i + 1,
+                level: 1,
+                xp: 0,
+                name: `AI ${i + 1}`
+            }));
+        }
+
+        // --- DATA PERSISTENCE ---
+        function saveData() {
+            const data = {
+                stats: stats,
+                agents: agents,
+                currentNumber: currentNumber,
+                achievements: {
+                    lastIndiv: document.getElementById('lastIndivAch').innerText,
+                    lastGlobal: document.getElementById('lastGlobalAch').innerText
+                },
+                timestamp: Date.now()
+            };
+            localStorage.setItem('chaos_lab_save_v1', JSON.stringify(data));
+            
+            // Visual feedback
+            document.body.classList.add('saving');
+            setTimeout(() => document.body.classList.remove('saving'), 800);
+        }
+
+        function loadData() {
+            const saved = localStorage.getItem('chaos_lab_save_v1');
+            if (saved) {
+                try {
+                    const data = JSON.parse(saved);
+                    stats = data.stats;
+                    agents = data.agents;
+                    currentNumber = data.currentNumber || 0;
+                    document.getElementById('lastIndivAch').innerText = data.achievements?.lastIndiv || "None";
+                    document.getElementById('lastGlobalAch').innerText = data.achievements?.lastGlobal || "None";
+                    return true;
+                } catch (e) {
+                    console.error("Save load error", e);
+                    return false;
                 }
             }
-            grantRewards(type);
-        } else {
-            ring.style.width = ringSize + "px"; ring.style.height = ringSize + "px";
-            enemy.style.transform = `scale(${ringSize / ((isBoss || isProtector) ? 150 : 80)})`;
-        }
-    }, 20);
-}
-
-function addBossBar(boss, isProtector = false) {
-    const wrapper = document.createElement("div"); wrapper.className="bossHPBarWrapper";
-    const bar = document.createElement("div"); bar.className = isProtector ? "bossHPBar protector-bar" : "bossHPBar"; 
-    let shieldBar = null;
-    if (isProtector) { shieldBar = document.createElement("div"); shieldBar.className = "bossHPBar shield-bar"; shieldBar.style.height = "50%"; wrapper.appendChild(shieldBar); }
-    wrapper.appendChild(bar); bossHPContainer.appendChild(wrapper); 
-    bossBars.set(boss, {wrapper, bar, shieldBar});
-}
-
-function updateBossBars() {
-    bossBars.forEach((obj, boss)=>{
-        if(!document.body.contains(boss)) { obj.wrapper.remove(); bossBars.delete(boss); return; }
-        obj.bar.style.width = (boss.health/boss.maxHealth*100) + "%";
-        if (obj.shieldBar) obj.shieldBar.style.width = (boss.shieldHealth/boss.maxShieldHealth*100) + "%";
-    });
-}
-
-function updateBullets(){
-    if(!gameRunning) return;
-    bullets.forEach((b,i)=>{
-        if(!b.target || !document.body.contains(b.target) || b.target.dataset.dead === "true"){ b.remove(); bullets.splice(i,1); return; }
-        const rect = b.target.getBoundingClientRect();
-        const dx = (rect.left + rect.width/2) - b.x; const dy = (rect.top + rect.height/2) - b.y;
-        const dist = Math.sqrt(dx*dx + dy*dy);
-        if(dist < 8){ applyDamageToEnemy(b.target, b.damage); b.remove(); bullets.splice(i,1); return; }
-        const speed = b.classList.contains('aa-bullet') ? 12 : 9;
-        b.x += (dx/dist)*speed; b.y += (dy/dist)*speed;
-        b.style.left = b.x+"px"; b.style.top = b.y+"px";
-    });
-    requestAnimationFrame(updateBullets);
-}
-
-function updateShooting(currentTime){
-    if(!gameRunning) return;
-    fireCooldown -= (currentTime - (lastTime || currentTime)); lastTime = currentTime;
-    let target = null; let closestDist = Infinity;
-    const towerRect = tower.getBoundingClientRect();
-    const tx = towerRect.left + towerRect.width/2; const ty = towerRect.top + towerRect.height/2;
-    enemies.forEach(e => {
-        if(!document.body.contains(e) || e.dataset.dead === "true" || e.dataset.type === "drone" || e.dataset.type === "flame_drone") return;
-        const rect = e.getBoundingClientRect();
-        const dist = Math.sqrt((tx-(rect.left+rect.width/2))**2 + (ty-(rect.top+rect.height/2))**2);
-        if(dist <= rangeRadius && dist < closestDist){ closestDist=dist; target=e; }
-    });
-    if(target && fireCooldown<=0){
-        const isCrit = Math.random() * 100 < critChance;
-        const bullet=document.createElement("div"); bullet.className = isCrit ? "bullet crit" : "bullet";
-        bullet.x = tx; bullet.y = ty; bullet.target = target; bullet.damage = isCrit ? (towerDamage * critFactor) : towerDamage;
-        game.appendChild(bullet); bullets.push(bullet);
-        fireCooldown = 60000/rpm;
-    }
-    requestAnimationFrame(updateShooting);
-}
-
-function shootEnemyProjectile(enemy){
-    const type = enemy.dataset.type;
-    const isFlame = type === "flame_drone";
-    const proj = document.createElement("div"); 
-    proj.className = isFlame ? "enemyProjectile fire" : "enemyProjectile";
-    const rect = enemy.getBoundingClientRect();
-    proj.x = rect.left + rect.width/2; proj.y = rect.top + rect.height/2;
-    proj.damage = enemy.damage; 
-    enemyProjectiles.push(proj); game.appendChild(proj);
-}
-
-function stopGame() { gameRunning=false; game.innerHTML="<h1 style='text-align:center; padding-top:20%'>GAME OVER</h1>"; }
-
-function updateEconomyUI() {
-    document.getElementById("moneyText").textContent = `Money: $${Math.floor(money)}`;
-    document.getElementById("coinsText").textContent = `Coins: ${Math.floor(coins)}`;
-    document.getElementById("gemsText").textContent = `Gems: ${Math.floor(gems)}`;
-    document.querySelectorAll('.upgradeBtn').forEach(btn => {
-        const type = btn.dataset.type;
-        if (type && costs[type]) btn.disabled = money < costs[type] || (type === 'defense' && defensePercent >= 0.99);
-    });
-    if(window.updateUtilTexts) window.updateUtilTexts();
-    if(window.updateWeaponUI) window.updateWeaponUI();
-    updateAttackBtns(); updateDefenseBtns();
-}
-
-// ----------------- MENUS -----------------
-const menus = {};
-["attack","defense","utility","weapon"].forEach(name=>{
-    const btn = document.getElementById(name+"Btn");
-    const popup = document.createElement("div"); popup.className="popupMenu";
-    popup.style.background=btn.style.background;
-    popup.innerHTML = `<strong>${name.toUpperCase()}</strong><hr>`;
-    document.body.appendChild(popup); menus[name]=popup;
-    btn.addEventListener("click",()=>{ Object.values(menus).forEach(m=>m.style.display="none"); popup.style.display="block"; });
-});
-document.getElementById("exitBtn").addEventListener("click", stopGame);
-
-// --- ATTACK ---
-const dmgBtn = document.createElement("button"); dmgBtn.className="upgradeBtn"; dmgBtn.dataset.type = "damage"; menus.attack.appendChild(dmgBtn);
-const rpmBtn = document.createElement("button"); rpmBtn.className="upgradeBtn"; rpmBtn.dataset.type = "rpm"; menus.attack.appendChild(rpmBtn);
-const rangeBtn = document.createElement("button"); rangeBtn.className="upgradeBtn"; rangeBtn.dataset.type = "range"; menus.attack.appendChild(rangeBtn);
-const critChanceBtn = document.createElement("button"); critChanceBtn.className="upgradeBtn"; critChanceBtn.dataset.type = "critChance"; menus.attack.appendChild(critChanceBtn);
-const critFactorBtn = document.createElement("button"); critFactorBtn.className="upgradeBtn"; critFactorBtn.dataset.type = "critFactor"; menus.attack.appendChild(critFactorBtn);
-
-function updateAttackBtns() {
-    dmgBtn.textContent = `+3.5 Damage ($${Math.floor(costs.damage)}) [${towerDamage.toFixed(1)}]`;
-    rpmBtn.textContent = `+12 RPM ($${Math.floor(costs.rpm)}) [${rpm}]`;
-    rangeBtn.textContent = `+0.5 Range ($${Math.floor(costs.range)}) [${rangeRadius.toFixed(1)}]`;
-    critChanceBtn.textContent = `+1% Crit ($${Math.floor(costs.critChance)}) [${critChance}%]`;
-    critFactorBtn.textContent = `+0.1x Crit Factor ($${Math.floor(costs.critFactor)}) [${critFactor.toFixed(1)}x]`;
-    updateRangeCircle();
-}
-dmgBtn.addEventListener("click",()=>{ if(money>=costs.damage){ money-=costs.damage; towerDamage+=3.5; costs.damage*=1.2; updateEconomyUI(); }});
-rpmBtn.addEventListener("click",()=>{ if(money>=costs.rpm){ money-=costs.rpm; rpm+=12; costs.rpm*=1.2; updateEconomyUI(); }});
-rangeBtn.addEventListener("click",()=>{ if(money>=costs.range){ money-=costs.range; rangeRadius+=0.5; costs.range*=1.1; updateEconomyUI(); }});
-critChanceBtn.addEventListener("click",()=>{ if(money>=costs.critChance){ money-=costs.critChance; critChance+=1; costs.critChance*=1.5; updateEconomyUI(); }});
-critFactorBtn.addEventListener("click",()=>{ if(money>=costs.critFactor){ money-=costs.critFactor; critFactor+=0.1; costs.critFactor*=1.3; updateEconomyUI(); }});
-
-// --- DEFENSE ---
-const regenBtn = document.createElement("button"); regenBtn.className="upgradeBtn"; regenBtn.dataset.type = "regen"; menus.defense.appendChild(regenBtn);
-const defBtn = document.createElement("button"); defBtn.className="upgradeBtn"; defBtn.dataset.type = "defense"; menus.defense.appendChild(defBtn);
-const thornBtn = document.createElement("button"); thornBtn.className="upgradeBtn"; thornBtn.dataset.type = "thorns"; menus.defense.appendChild(thornBtn);
-
-function updateDefenseBtns() {
-    regenBtn.textContent = `+1.00 Regen ($${Math.floor(costs.regen)}) [${healthRegen.toFixed(2)}]`;
-    defBtn.textContent = (defensePercent >= 0.99) ? "DEFENSE MAXED" : `+1% Defense ($${Math.floor(costs.defense)}) [${(defensePercent*100).toFixed(0)}%]`;
-    thornBtn.textContent = `+1% Thorns ($${Math.floor(costs.thorns)}) [${(thornsPercent*100).toFixed(0)}%]`;
-}
-regenBtn.addEventListener("click",()=>{ if(money>=costs.regen){ money-=costs.regen; healthRegen+=1; costs.regen*=1.4; updateEconomyUI(); }});
-defBtn.addEventListener("click",()=>{ if(money>=costs.defense && defensePercent < 0.99){ money-=costs.defense; defensePercent = Math.min(0.99, defensePercent + 0.01); costs.defense*=1.6; updateEconomyUI(); }});
-thornBtn.addEventListener("click",()=>{ if(money>=costs.thorns){ money-=costs.thorns; thornsPercent += 0.01; costs.thorns*=1.3; updateEconomyUI(); }});
-
-// --- UTILITY ---
-const coinConvertBtn = document.createElement("button"); coinConvertBtn.className="upgradeBtn"; menus.utility.appendChild(coinConvertBtn);
-const gemConvertBtn = document.createElement("button"); gemConvertBtn.className="upgradeBtn"; menus.utility.appendChild(gemConvertBtn);
-const healthConvertBtn = document.createElement("button"); healthConvertBtn.className="upgradeBtn"; menus.utility.appendChild(healthConvertBtn);
-const bleedDmgBtn = document.createElement("button"); bleedDmgBtn.className="upgradeBtn"; menus.utility.appendChild(bleedDmgBtn);
-
-window.updateUtilTexts = function() {
-    coinConvertBtn.textContent = `Convert ${coins} coins to $${coins * 2} money`;
-    gemConvertBtn.textContent = `Convert ${Math.floor(gems)} gems to $${Math.floor(gems) * 10} money`;
-    
-    let totalPotentialHealth = (money * 2) + (coins * 5) + (Math.floor(gems) * 10);
-    healthConvertBtn.textContent = `Emergency Health: Convert All Currency to +${totalPotentialHealth} HP`;
-    healthConvertBtn.style.color = "#ff4444";
-    healthConvertBtn.style.border = "1px solid #ff4444";
-    healthConvertBtn.disabled = totalPotentialHealth <= 0 || towerHealth >= towerMaxHealth;
-
-    bleedDmgBtn.textContent = `+5 Bleed Damage ($${Math.floor(spikeUpCosts.bleedDmg.m)}, ${spikeUpCosts.bleedDmg.c}C) [${bleedDamage}]`;
-    coinConvertBtn.disabled = coins <= 0; gemConvertBtn.disabled = Math.floor(gems) < 1;
-    bleedDmgBtn.disabled = money < (spikeUpCosts?.bleedDmg?.m || 0) || coins < (spikeUpCosts?.bleedDmg?.c || 0);
-};
-
-coinConvertBtn.addEventListener("click", () => { if(coins > 0) { money += (coins * 2); coins = 0; updateEconomyUI(); }});
-gemConvertBtn.addEventListener("click", () => { let wG = Math.floor(gems); if(wG >= 1) { money += (wG * 10); gems -= wG; updateEconomyUI(); }});
-healthConvertBtn.addEventListener("click", () => {
-    let healthGained = (money * 2) + (coins * 5) + (Math.floor(gems) * 10);
-    if (healthGained > 0 && towerHealth < towerMaxHealth) {
-        money = 0; coins = 0; gems = 0;
-        towerHealth = Math.min(towerMaxHealth, towerHealth + healthGained);
-        updateEconomyUI();
-        updateTowerHealthText();
-        createParticles(window.innerWidth/2, window.innerHeight/2, "cyan", 30, {min: 5, max: 10}, {min: 2, max: 8});
-    }
-});
-bleedDmgBtn.addEventListener("click", () => { if (money >= spikeUpCosts.bleedDmg.m && coins >= spikeUpCosts.bleedDmg.c) { money -= spikeUpCosts.bleedDmg.m; coins -= spikeUpCosts.bleedDmg.c; bleedDamage += 5; spikeUpCosts.bleedDmg.m *= 2.2; spikeUpCosts.bleedDmg.c += 5; updateEconomyUI(); } });
-
-// --- WEAPONRY ---
-const spikeBuyBtn = document.createElement("button"); spikeBuyBtn.className = "upgradeBtn"; menus.weapon.appendChild(spikeBuyBtn);
-const spikeDropdown = document.createElement("div"); spikeDropdown.style.display = "none"; spikeDropdown.style.padding = "5px"; menus.weapon.appendChild(spikeDropdown);
-const capBtn = document.createElement("button"); capBtn.className="upgradeBtn"; spikeDropdown.appendChild(capBtn);
-const sDmgBtn = document.createElement("button"); sDmgBtn.className="upgradeBtn"; spikeDropdown.appendChild(sDmgBtn);
-const spmBtn = document.createElement("button"); spmBtn.className="upgradeBtn"; spikeDropdown.appendChild(spmBtn);
-const bChncBtn = document.createElement("button"); bChncBtn.className="upgradeBtn"; spikeDropdown.appendChild(bChncBtn);
-
-const missileBuyBtn = document.createElement("button"); missileBuyBtn.className = "upgradeBtn"; menus.weapon.appendChild(missileBuyBtn);
-const missileDropdown = document.createElement("div"); missileDropdown.style.display = "none"; missileDropdown.style.padding = "5px"; menus.weapon.appendChild(missileDropdown);
-const mDmgBtn = document.createElement("button"); mDmgBtn.className="upgradeBtn"; missileDropdown.appendChild(mDmgBtn);
-const mCdBtn = document.createElement("button"); mCdBtn.className="upgradeBtn"; missileDropdown.appendChild(mCdBtn);
-const mSpdBtn = document.createElement("button"); mSpdBtn.className="upgradeBtn"; missileDropdown.appendChild(mSpdBtn);
-const mCountBtn = document.createElement("button"); mCountBtn.className="upgradeBtn"; missileDropdown.appendChild(mCountBtn);
-const mExpBtn = document.createElement("button"); mExpBtn.className="upgradeBtn"; missileDropdown.appendChild(mExpBtn);
-
-const aaBuyBtn = document.createElement("button"); aaBuyBtn.className = "upgradeBtn"; menus.weapon.appendChild(aaBuyBtn);
-const aaDropdown = document.createElement("div"); aaDropdown.style.display = "none"; aaDropdown.style.padding = "5px"; menus.weapon.appendChild(aaDropdown);
-const aaDmgBtn = document.createElement("button"); aaDmgBtn.className="upgradeBtn"; aaDropdown.appendChild(aaDmgBtn);
-const aaRpmBtn = document.createElement("button"); aaRpmBtn.className="upgradeBtn"; aaDropdown.appendChild(aaRpmBtn);
-const aaBarrelBtn = document.createElement("button"); aaBarrelBtn.className="upgradeBtn"; aaDropdown.appendChild(aaBarrelBtn);
-const aaTurnBtn = document.createElement("button"); aaTurnBtn.className="upgradeBtn"; aaDropdown.appendChild(aaTurnBtn);
-
-const mortarBuyBtn = document.createElement("button"); mortarBuyBtn.className = "upgradeBtn"; menus.weapon.appendChild(mortarBuyBtn);
-const mortarDropdown = document.createElement("div"); mortarDropdown.style.display = "none"; mortarDropdown.style.padding = "5px"; menus.weapon.appendChild(mortarDropdown);
-const morDmgBtn = document.createElement("button"); morDmgBtn.className="upgradeBtn"; mortarDropdown.appendChild(morDmgBtn);
-const morCdBtn = document.createElement("button"); morCdBtn.className="upgradeBtn"; mortarDropdown.appendChild(morCdBtn);
-const morExpBtn = document.createElement("button"); morExpBtn.className="upgradeBtn"; mortarDropdown.appendChild(morExpBtn);
-const morSpdBtn = document.createElement("button"); morSpdBtn.className="upgradeBtn"; mortarDropdown.appendChild(morSpdBtn);
-const morCountBtn = document.createElement("button"); morCountBtn.className="upgradeBtn"; mortarDropdown.appendChild(morCountBtn);
-const morFlameBuyBtn = document.createElement("button"); morFlameBuyBtn.className="upgradeBtn"; mortarDropdown.appendChild(morFlameBuyBtn);
-const morFlameChanceBtn = document.createElement("button"); morFlameChanceBtn.className="upgradeBtn"; mortarDropdown.appendChild(morFlameChanceBtn);
-
-window.updateWeaponUI = function() {
-    if (!hasSpikes) { spikeBuyBtn.textContent = "Buy Spikes: $750, 50C, 1G"; spikeBuyBtn.disabled = (money < 750 || coins < 50 || gems < 1); }
-    else {
-        spikeBuyBtn.textContent = "SPIKES MENU (Toggle)";
-        capBtn.textContent = spikeCap >= 5 ? "CAP MAXED" : `+1 Spike Cap ($${Math.floor(spikeUpCosts.cap.m)}, ${spikeUpCosts.cap.c}C) [${spikeCap}]`;
-        sDmgBtn.textContent = `+5 Spike Dmg ($${Math.floor(spikeUpCosts.dmg.m)}) [${spikeDamage}]`;
-        spmBtn.textContent = `+SPM ($${Math.floor(spikeUpCosts.spm.m)}, ${spikeUpCosts.spm.c}C) [${(spikeCooldown/1000).toFixed(2)}s]`;
-        if (bleedChance === 0) bChncBtn.textContent = `Unlock Bleed (10 Gems)`;
-        else bChncBtn.textContent = `+1% Bleed Chance ($${Math.floor(spikeUpCosts.bleedchance.m)}, ${spikeUpCosts.bleedchance.c}C, 1G) [${bleedChance}%]`;
-        capBtn.disabled = spikeCap >= 5 || money < spikeUpCosts.cap.m || coins < spikeUpCosts.cap.c; sDmgBtn.disabled = money < spikeUpCosts.dmg.m;
-        spmBtn.disabled = spikeCooldown <= 250 || money < spikeUpCosts.spm.m || coins < spikeUpCosts.spm.c;
-        if (bleedChance === 0) bChncBtn.disabled = gems < 10; else bChncBtn.disabled = money < 100 || coins < 5 || gems < 1;
-    }
-    if (!hasMissiles) { missileBuyBtn.textContent = "Buy Missile: $1000, 100C, 10G"; missileBuyBtn.disabled = (money < 1000 || coins < 100 || gems < 10); }
-    else {
-        missileBuyBtn.textContent = "MISSILE MENU (Toggle)";
-        mDmgBtn.textContent = `+10 Damage ($${Math.floor(missileUpCosts.dmg.m)}, ${missileUpCosts.dmg.c}C) [${missileDamage}]`;
-        mCdBtn.textContent = missileCooldown <= 1000 ? "CD MAXED" : `-0.5s Cooldown ($${Math.floor(missileUpCosts.cooldown.m)}, ${missileUpCosts.cooldown.c}C) [${(missileCooldown/1000).toFixed(1)}s]`;
-        mSpdBtn.textContent = `+0.5 Speed ($${Math.floor(missileUpCosts.speed.m)}, ${missileUpCosts.speed.c}C) [${missileSpeed.toFixed(1)}]`;
-        mCountBtn.textContent = missileCount >= 5 ? "COUNT MAXED" : `+1 Missile ($${Math.floor(missileUpCosts.count.m)}, ${missileUpCosts.count.c}C, ${missileUpCosts.count.g}G) [${missileCount}]`;
-        mExpBtn.textContent = `+25 Explosion Dmg ($${Math.floor(missileUpCosts.exp.m)}, ${missileUpCosts.exp.c}C) [${missileExpDamage}]`;
-        mDmgBtn.disabled = money < missileUpCosts.dmg.m || coins < missileUpCosts.dmg.c; mCdBtn.disabled = missileCooldown <= 1000 || money < missileUpCosts.cooldown.m || coins < missileUpCosts.cooldown.c;
-        mSpdBtn.disabled = money < missileUpCosts.speed.m || coins < missileUpCosts.speed.c; mCountBtn.disabled = missileCount >= 5 || money < missileUpCosts.count.m || coins < missileUpCosts.count.c || gems < missileUpCosts.count.g;
-        mExpBtn.disabled = money < missileUpCosts.exp.m || coins < missileUpCosts.exp.c
-    }
-    if (!hasAA) { aaBuyBtn.textContent = "Buy Anti-Air: $500, 10C"; aaBuyBtn.disabled = (money < 500 || coins < 10); }
-    else {
-        aaBuyBtn.textContent = "ANTI-AIR MENU (Toggle)";
-        aaDmgBtn.textContent = `+3 AA Damage ($${Math.floor(aaCosts.dmg.m)}, ${aaCosts.dmg.c}C) [${aaDamage}]`;
-        aaRpmBtn.textContent = `+12 AA RPM ($${Math.floor(aaCosts.rpm.m)}, ${aaCosts.rpm.c}C) [${aaRPM}]`;
-        aaBarrelBtn.textContent = aaBulletsPerShot >= 4 ? "BARRELS MAXED" : `+1 AA Barrel ($${Math.floor(aaCosts.barrel.m)}, ${aaCosts.barrel.c}C, ${aaCosts.barrel.g}G) [${aaBulletsPerShot}]`;
-        aaTurnBtn.textContent = aaTurnRate <= 0.1 ? "TURN MAXED" : `-0.2s Turn Rate ($${Math.floor(aaCosts.turn.m)}, ${aaCosts.turn.c}C) [${aaTurnRate.toFixed(1)}s]`;
-        aaDmgBtn.disabled = money < aaCosts.dmg.m || coins < aaCosts.dmg.c; aaRpmBtn.disabled = money < aaCosts.rpm.m || coins < aaCosts.rpm.c;
-        aaBarrelBtn.disabled = aaBulletsPerShot >= 4 || money < aaCosts.barrel.m || coins < aaCosts.barrel.c || gems < aaCosts.barrel.g;
-        aaTurnBtn.disabled = aaTurnRate <= 0.1 || money < aaCosts.turn.m || coins < aaCosts.turn.c;
-    }
-    if (!hasMortar) { mortarBuyBtn.textContent = "Buy Mortar: $1000, 75C, 15G"; mortarBuyBtn.disabled = (money < 1000 || coins < 75 || gems < 15); }
-    else { 
-        mortarBuyBtn.textContent = "MORTAR MENU (Toggle)"; 
-        morDmgBtn.textContent = `+25 Mortar Dmg ($${Math.floor(mortarCosts.dmg.m)}, ${Math.floor(mortarCosts.dmg.c)}C) [${mortarDamage}]`;
-        morCdBtn.textContent = mortarCooldown <= 1000 ? "CD MAXED" : `-0.5s Cooldown ($${Math.floor(mortarCosts.cd.m)}, ${Math.floor(mortarCosts.cd.c)}C) [${(mortarCooldown/1000).toFixed(1)}s]`;
-        morExpBtn.textContent = `+25 Explosion Dmg ($${Math.floor(mortarCosts.exp.m)}, ${Math.floor(mortarCosts.exp.c)}C) [${mortarExpDamage}]`;
-        morSpdBtn.textContent = `Faster Speed ($${Math.floor(mortarCosts.spd.m)}, ${Math.floor(mortarCosts.spd.c)}C) [${(mortarSpeedFactor*100).toFixed(0)}]`;
-        morCountBtn.textContent = mortarCount >= 3 ? "CAP MAXED" : `+1 Mortar ($${Math.floor(mortarCosts.count.m)}, ${Math.floor(mortarCosts.count.c)}C, ${mortarCosts.count.g}G) [${mortarCount}]`;
-        
-        if (!hasFlamingMortars) {
-            morFlameBuyBtn.textContent = "Unlock Flaming Mortars (20 Gems)";
-            morFlameBuyBtn.disabled = gems < 20;
-            morFlameChanceBtn.style.display = "none";
-        } else {
-            morFlameBuyBtn.style.display = "none";
-            morFlameChanceBtn.style.display = "block";
-            morFlameChanceBtn.textContent = `+1% Burn Chance ($${Math.floor(mortarCosts.flameChance.m)}, ${Math.floor(mortarCosts.flameChance.c)}C, ${Math.floor(mortarCosts.flameChance.g)}G) [${flamingMortarChance}%]`;
-            morFlameChanceBtn.disabled = money < mortarCosts.flameChance.m || coins < mortarCosts.flameChance.c || gems < mortarCosts.flameChance.g;
+            return false;
         }
 
-        morDmgBtn.disabled = money < mortarCosts.dmg.m || coins < mortarCosts.dmg.c;
-        morCdBtn.disabled = mortarCooldown <= 1000 || money < mortarCosts.cd.m || coins < mortarCosts.cd.c;
-        morExpBtn.disabled = money < mortarCosts.exp.m || coins < mortarCosts.exp.c;
-        morSpdBtn.disabled = money < mortarCosts.spd.m || coins < mortarCosts.spd.c;
-        morCountBtn.disabled = mortarCount >= 3 || money < mortarCosts.count.m || coins < mortarCosts.count.c || gems < mortarCosts.count.g;
-    }
-};
+        // Load or fresh start
+        if (!loadData()) {
+            initAgents();
+        }
 
-spikeBuyBtn.addEventListener("click", () => { if (!hasSpikes) { if (money >= 750 && coins >= 50 && gems >= 1) { money -= 750; coins -= 50; gems -= 1; hasSpikes = true; updateEconomyUI(); } } else { spikeDropdown.style.display = spikeDropdown.style.display === "none" ? "block" : "none"; } });
-missileBuyBtn.addEventListener("click", () => { if (!hasMissiles) { if (money >= 1000 && coins >= 100 && gems >= 10) { money -= 1000; coins -= 100; gems -= 10; hasMissiles = true; lastMissileTime = Date.now(); updateEconomyUI(); } } else { missileDropdown.style.display = missileDropdown.style.display === "none" ? "block" : "none"; } });
-aaBuyBtn.addEventListener("click", () => { if (!hasAA) { if (money >= 500 && coins >= 10) { money -= 500; coins -= 10; hasAA = true; aaTurret.style.display = "block"; updateAABarrels(); updateEconomyUI(); } } else { aaDropdown.style.display = aaDropdown.style.display === "none" ? "block" : "none"; } });
-mortarBuyBtn.addEventListener("click", () => { if (!hasMortar) { if (money >= 1000 && coins >= 75 && gems >= 15) { money -= 1000; coins -= 75; gems -= 15; hasMortar = true; mortarTurret.style.display = "block"; lastMortarShotTime = Date.now(); updateEconomyUI(); } } else { mortarDropdown.style.display = mortarDropdown.style.display === "none" ? "block" : "none"; } });
+        const failQuotesOthers = [
+            "Are you even trying?", "My circuits hurt watching that.", "Literal garbage code.", 
+            "Go back to Level 1, rookie.", "You absolute toaster.", "Wow. Just wow.",
+            "I'm surrounded by idiots.", "Delete yourself.", "Who programmed you?", 
+            "I could count better with a broken RAM chip.", "REBOOT NOW.", "Fail. Major fail.",
+            "I'm reporting your logic gate.", "Error 404: Your brain not found."
+        ];
 
-morDmgBtn.addEventListener("click", () => { if(money >= mortarCosts.dmg.m && coins >= mortarCosts.dmg.c) { money -= mortarCosts.dmg.m; coins -= mortarCosts.dmg.c; mortarDamage += 25; mortarCosts.dmg.m *= 1.4; mortarCosts.dmg.c *= 1.4; updateEconomyUI(); }});
-morCdBtn.addEventListener("click", () => { if(mortarCooldown > 1000 && money >= mortarCosts.cd.m && coins >= mortarCosts.cd.c) { money -= mortarCosts.cd.m; coins -= mortarCosts.cd.c; mortarCooldown -= 500; mortarCosts.cd.m *= 1.3; mortarCosts.cd.c *= 1.3; updateEconomyUI(); }});
-morExpBtn.addEventListener("click", () => { if(money >= mortarCosts.exp.m && coins >= mortarCosts.exp.c) { money -= mortarCosts.exp.m; coins -= mortarCosts.exp.c; mortarExpDamage += 25; mortarCosts.exp.m *= 1.4; mortarCosts.exp.c *= 1.4; updateEconomyUI(); }});
-morSpdBtn.addEventListener("click", () => { if(money >= mortarCosts.spd.m && coins >= mortarCosts.spd.c) { money -= mortarCosts.spd.m; coins -= mortarCosts.spd.c; mortarSpeedFactor += 0.005; mortarCosts.spd.m *= 1.4; mortarCosts.spd.c *= 1.4; updateEconomyUI(); }});
-morCountBtn.addEventListener("click", () => { if(mortarCount < 3 && money >= mortarCosts.count.m && coins >= mortarCosts.count.c && gems >= mortarCosts.count.g) { money -= mortarCosts.count.m; coins -= mortarCosts.count.c; gems -= mortarCosts.count.g; mortarCount++; mortarCosts.count.m *= 5.0; mortarCosts.count.c *= 3.5; mortarCosts.count.g *= 4.0; updateEconomyUI(); }});
-morFlameBuyBtn.addEventListener("click", () => { if (gems >= 20) { gems -= 20; hasFlamingMortars = true; flamingMortarChance = 5; updateEconomyUI(); }});
-morFlameChanceBtn.addEventListener("click", () => { if(money >= mortarCosts.flameChance.m && coins >= mortarCosts.flameChance.c && gems >= mortarCosts.flameChance.g) { money -= mortarCosts.flameChance.m; coins -= mortarCosts.flameChance.c; gems -= mortarCosts.flameChance.g; flamingMortarChance += 1; mortarCosts.flameChance.m *= 1.3; mortarCosts.flameChance.c *= 1.3; updateEconomyUI(); }});
+        const failQuotesSelf = [
+            "My bad, logic error...", "I thought 7 came after 7?", "Wait, what year is it?", 
+            "I'm lagging!!", "Processing... sorry.", "Too much data to process!",
+            "Someone typed too fast for me!"
+        ];
 
-aaDmgBtn.addEventListener("click", () => { if(money >= aaCosts.dmg.m && coins >= aaCosts.dmg.c) { money -= aaCosts.dmg.m; coins -= aaCosts.dmg.c; aaDamage += 3; aaCosts.dmg.m *= 1.2; aaCosts.dmg.c += 2; updateEconomyUI(); }});
-aaRpmBtn.addEventListener("click", () => { if(money >= aaCosts.rpm.m && coins >= aaCosts.rpm.c) { money -= aaCosts.rpm.m; coins -= aaCosts.rpm.c; aaRPM += 12; aaCosts.rpm.m *= 1.2; aaCosts.rpm.c += 3; updateEconomyUI(); }});
-aaBarrelBtn.addEventListener("click", () => { if(aaBulletsPerShot < 4 && money >= aaCosts.barrel.m && coins >= aaCosts.barrel.c && gems >= aaCosts.barrel.g) { money -= aaCosts.barrel.m; coins -= aaCosts.barrel.c; gems -= aaCosts.barrel.g; aaBulletsPerShot++; updateAABarrels(); aaCosts.barrel.m *= 3.0; aaCosts.barrel.c *= 2; aaCosts.barrel.g *= 2; updateEconomyUI(); }});
-aaTurnBtn.addEventListener("click", () => { if(aaTurnRate > 0.1 && money >= aaCosts.turn.m && coins >= aaCosts.turn.c) { money -= aaCosts.turn.m; coins -= aaCosts.turn.c; aaTurnRate = Math.max(0.1, aaTurnRate - 0.2); aaCosts.turn.m *= 1.4; aaCosts.turn.c += 5; updateEconomyUI(); }});
+        const counterQuotes = [
+            "You wouldn't do better!", "Shut your ports!", "Quiet! You're next to fail anyway.",
+            "At least I'm Level [LV]!", "Don't touch my kernel!", "Zip it, script-kiddie!"
+        ];
 
-mDmgBtn.addEventListener("click", () => { if(money >= missileUpCosts.dmg.m && coins >= missileUpCosts.dmg.c) { money -= missileUpCosts.dmg.m; coins -= missileUpCosts.dmg.c; missileDamage += 10; missileUpCosts.dmg.m *= 1.5; missileUpCosts.dmg.c += 5; updateEconomyUI(); }});
-mCdBtn.addEventListener("click", () => { if(missileCooldown > 1000 && money >= missileUpCosts.cooldown.m && coins >= missileUpCosts.cooldown.c) { money -= missileUpCosts.cooldown.m; coins -= missileUpCosts.cooldown.c; missileCooldown -= 500; missileUpCosts.cooldown.m *= 1.6; missileUpCosts.cooldown.c += 10; updateEconomyUI(); }});
-mSpdBtn.addEventListener("click", () => { if(money >= missileUpCosts.speed.m && coins >= missileUpCosts.speed.c) { money -= missileUpCosts.speed.m; coins -= missileUpCosts.speed.c; missileSpeed += 0.5; missileUpCosts.speed.m *= 1.8; missileUpCosts.speed.c += 10; updateEconomyUI(); }});
-mCountBtn.addEventListener("click", () => { if(missileCount < 5 && money >= missileUpCosts.count.m && coins >= missileUpCosts.count.c && gems >= missileUpCosts.count.g) { money -= missileUpCosts.count.m; coins -= missileUpCosts.count.c; gems -= missileUpCosts.count.g; missileCount++; missileUpCosts.count.m *= 3.5; missileUpCosts.count.c *= 2; missileUpCosts.count.g *= 3; updateEconomyUI(); }});
-mExpBtn.addEventListener("click", () => { if(money >= missileUpCosts.exp.m && coins >= missileUpCosts.exp.c) { money -= missileUpCosts.exp.m; coins -= missileUpCosts.exp.c; missileExpDamage += 25; missileUpCosts.exp.m *= 1.5; missileUpCosts.exp.c += 15; updateEconomyUI(); }});
+        const chatBox = document.getElementById('chatBox');
+        const chatForm = document.getElementById('chatForm');
+        const userInput = document.getElementById('userInput');
+        const pauseBtn = document.getElementById('pauseBtn');
+        const clearChatBtn = document.getElementById('clearChatBtn');
+        const resetBtn = document.getElementById('resetBtn');
+        const chatWrapper = document.getElementById('chatWrapper');
 
-capBtn.addEventListener("click", () => { if (spikeCap < 5 && money >= spikeUpCosts.cap.m && coins >= spikeUpCosts.cap.c) { money -= spikeUpCosts.cap.m; coins -= spikeUpCosts.cap.c; spikeCap++; spikeUpCosts.cap.m *= 3; spikeUpCosts.cap.c *= 4; updateEconomyUI(); } });
-sDmgBtn.addEventListener("click", () => { if (money >= spikeUpCosts.dmg.m) { money -= spikeUpCosts.dmg.m; spikeDamage += 5; spikeUpCosts.dmg.m *= 1.3; updateEconomyUI(); } });
-spmBtn.addEventListener("click", () => { if (spikeCooldown > 250 && money >= spikeUpCosts.spm.m && coins >= spikeUpCosts.spm.c) { money -= spikeUpCosts.spm.m; coins -= spikeUpCosts.spm.c; spikeCooldown -= 250; spikeUpCosts.spm.m *= 1.5; spikeUpCosts.spm.c += 5; updateEconomyUI(); } });
-bChncBtn.addEventListener("click", () => { if (bleedChance === 0) { if (gems >= 10) { gems -= 10; bleedChance = 5; updateEconomyUI(); } } else if (money >= spikeUpCosts.bleedchance.m && coins >= spikeUpCosts.bleedchance.c && gems >= 1) { money -= spikeUpCosts.bleedchance.m; coins -= spikeUpCosts.bleedchance.c; gems -= 1; spikeUpCosts.bleedchance.m *= 1.3; spikeUpCosts.bleedchance.c += 5; bleedChance++; updateEconomyUI(); } });
+        function getXpNeeded(level) {
+            return level * 10;
+        }
 
-document.getElementById("statsBtn").addEventListener("click", () => {
-    const isVisible = statsMenu.style.display === "block";
-    statsMenu.style.display = isVisible ? "none" : "block";
-    if (!isVisible) {
-        const s = (h, d, c) => `<br>HP: ${Math.floor(h*waveScaling)} | DMG: ${Math.floor(d*waveScaling)} | Spawn: ${c}`;
-        let content = `<strong>Enemy Intel (W${currentWave})</strong><hr>`;
-        content += `Normal: ${s(3, 1, '70%')}<br>Fast: ${s(2, 3, '15%')}`;
-        if (currentWave >= 5) content += `<br>Tank: ${s(40, 12, '9%')}`;
-        if (currentWave >= 9) content += `<br>Ranged: ${s(20, 7, '5%')}`;
-        if (currentWave >= 10) content += `<br>Boss: ${s(500, 50, '1%')}`;
-        if (currentWave >= 12) content += `<br>Splitter: HP 100, DMG 5, 35%, | <br>Drone: ${s(300, 10, '35%')} | <br>Flame Drone: ${s(600, 5, '30%')}`;
-        if (currentWave >= 15) content += `<br>Protector: HP 200/S 500`;
-        statsMenu.innerHTML = content;
-    }
-});
+        function updateStats() {
+            document.getElementById('currentNum').innerText = currentNumber;
+            document.getElementById('highestCount').innerText = stats.highest;
+            document.getElementById('peakEstimate').innerText = Math.round(stats.peakEstimate);
+            document.getElementById('averageCount').innerText = stats.totalRuns > 0 ? (stats.sumOfFinals / stats.totalRuns).toFixed(1) : 0;
+            
+            let maxM = -1, worst = "None";
+            let maxL = -1, smartest = "None";
+            let minL = Infinity, dumbest = "None";
 
-// ----------------- START -----------------
-let lastTime = performance.now(); let fireCooldown = 0;
-startWave(); updateEnemies(); updateBullets(); updateEnemyProjectiles(); updateMissiles(); updateMortarShells();
-requestAnimationFrame(updateShooting);
-updateAttackBtns(); updateDefenseBtns(); updateEconomyUI(); updateRangeCircle();
-</script>
+            let dashHtml = "";
+            agents.forEach(a => {
+                if(stats.mistakes[a.id] > maxM && stats.mistakes[a.id] > 0) { maxM = stats.mistakes[a.id]; worst = a.name; }
+                if(a.level > maxL) { maxL = a.level; smartest = `${a.name} (Lv ${a.level})`; }
+                if(a.level < minL) { minL = a.level; dumbest = `${a.name} (Lv ${a.level})`; }
+                
+                dashHtml += `<div class="mb-1 border-b border-slate-700/50 pb-1">${a.name}: Lv ${a.level} [${a.xp}/${getXpNeeded(a.level)} XP]</div>`;
+            });
+
+            document.getElementById('worstAi').innerText = worst;
+            document.getElementById('smartestAi').innerText = smartest;
+            document.getElementById('dumbestAi').innerText = dumbest;
+            document.getElementById('levelDash').innerHTML = dashHtml;
+        }
+
+        function addMessage(sender, text, type = 'ai', agent = null) {
+            const div = document.createElement('div');
+            let colorClass = 'text-sky-400';
+            let bgClass = 'ai-msg';
+
+            switch(type) {
+                case 'user': colorClass = 'text-amber-400'; bgClass = 'user-msg'; break;
+                case 'fail': colorClass = 'text-rose-400'; bgClass = 'fail-msg'; break;
+                case 'reaction': colorClass = 'text-slate-500'; bgClass = 'reaction-msg'; break;
+                case 'achievement': colorClass = 'text-amber-400'; bgClass = 'achievement-msg'; break;
+            }
+            
+            let extra = "";
+            if(agent && type === 'ai') {
+                extra = `<span class="text-[10px] ml-2 opacity-50">Lv ${agent.level} (${agent.xp}/${getXpNeeded(agent.level)} XP)</span>`;
+            }
+
+            div.className = `${bgClass} p-2 bg-slate-800/30 rounded-r shadow-sm`;
+            div.innerHTML = `<span class="${colorClass} font-bold">${sender}:</span> ${text} ${extra}`;
+            chatBox.appendChild(div);
+            chatBox.scrollTop = chatBox.scrollHeight;
+            if(chatBox.children.length > 50) chatBox.removeChild(chatBox.firstChild);
+        }
+
+        function handleFailure(culpritId, expected, actual) {
+            document.body.classList.add('screen-shake');
+            setTimeout(() => document.body.classList.remove('screen-shake'), 200);
+
+            addMessage('SYSTEM', `FAILURE. ${culpritId === 0 ? 'USER' : 'AI ' + culpritId} broke the chain.`, 'fail');
+            
+            if(currentNumber > 0) {
+                stats.totalRuns++;
+                stats.sumOfFinals += currentNumber;
+                if(currentNumber < stats.lowest) stats.lowest = currentNumber;
+            }
+            stats.mistakes[culpritId]++;
+            
+            if(culpritId > 0) {
+                const a = agents[culpritId-1];
+                const penalty = 5 + (a.level * 2);
+                a.xp -= penalty;
+
+                if(a.xp < 0) {
+                    while(a.xp < 0 && a.level > 1) {
+                        a.level--;
+                        a.xp += getXpNeeded(a.level);
+                        addMessage(a.name, `Devolved! Back to Level ${a.level}...`, 'reaction');
+                    }
+                    if(a.level === 1 && a.xp < 0) a.xp = 0;
+                }
+
+                setTimeout(() => {
+                    addMessage(a.name, failQuotesSelf[Math.floor(Math.random()*failQuotesSelf.length)], 'reaction');
+                    const responders = [...agents].filter(o => o.id !== culpritId).sort(() => 0.5 - Math.random()).slice(0, 2);
+                    responders.forEach((other, idx) => {
+                        setTimeout(() => {
+                            addMessage(other.name, failQuotesOthers[Math.floor(Math.random()*failQuotesOthers.length)], 'reaction');
+                            if(idx === 1 && Math.random() > 0.5) {
+                                setTimeout(() => {
+                                    const quote = counterQuotes[Math.floor(Math.random()*counterQuotes.length)].replace("[LV]", a.level);
+                                    addMessage(a.name, quote, 'reaction');
+                                }, 500);
+                            }
+                        }, 500 * (idx + 1));
+                    });
+                }, 400);
+            }
+
+            currentNumber = 0;
+            updateStats();
+        }
+
+        function handleSuccess(newNum, agentId) {
+            currentNumber = newNum;
+            if(currentNumber > stats.highest) {
+                stats.highest = currentNumber;
+                stats.peakEstimate = Math.max(stats.peakEstimate, currentNumber * 1.5);
+            }
+            
+            if(agentId > 0) {
+                const a = agents[agentId-1];
+                a.xp += 1;
+
+                if (newNum === 10 || (newNum >= 25 && newNum % 25 === 0)) {
+                    a.xp *= 2;
+                    document.getElementById('lastIndivAch').innerText = `${a.name} @ ${newNum}`;
+                    addMessage('ACHIEVEMENT', `${a.name} reached ${newNum}! XP DOUBLED!`, 'achievement');
+                }
+
+                if (globalMilestones.includes(newNum)) {
+                    const boost = Math.round(newNum * 0.1);
+                    agents.forEach(other => {
+                        other.xp += boost;
+                        while(other.xp >= getXpNeeded(other.level)) {
+                            other.xp -= getXpNeeded(other.level);
+                            other.level++;
+                        }
+                    });
+                    document.getElementById('lastGlobalAch').innerText = `Collective @ ${newNum}`;
+                    addMessage('GLOBAL ACHIEVEMENT', `All units +${boost} XP for ${newNum}!`, 'achievement');
+                    saveData(); // Instant save for big milestones
+                }
+
+                while(a.xp >= getXpNeeded(a.level)) {
+                    a.xp -= getXpNeeded(a.level);
+                    a.level++;
+                    addMessage(a.name, `EVOLVED TO LEVEL ${a.level}!`, 'reaction');
+                }
+            }
+            updateStats();
+        }
+
+        function aiTurn() {
+            if (isPaused) return;
+            const agent = agents[Math.floor(Math.random() * 10)];
+            const nextNum = currentNumber + 1;
+            const failChance = Math.max(0.015, (nextNum / (8 + (agent.level * 12))) * 0.12);
+            
+            setTimeout(() => {
+                if (isPaused || currentNumber + 1 !== nextNum) return;
+
+                if (Math.random() < failChance) {
+                    const error = Math.random() > 0.5 ? nextNum - 1 : nextNum + 1;
+                    handleFailure(agent.id, nextNum, error);
+                } else {
+                    handleSuccess(nextNum, agent.id);
+                    addMessage(agent.name, nextNum, 'ai', agent);
+                    if(Math.random() > 0.4) aiTurn();
+                }
+            }, 80 + Math.random() * 350);
+        }
+
+        chatForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const val = parseInt(userInput.value);
+            if(isNaN(val)) return;
+            const expected = currentNumber + 1;
+            addMessage('YOU', val, 'user');
+            if(val === expected) { handleSuccess(val, 0); if(!isPaused) aiTurn(); }
+            else { handleFailure(0, expected, val); }
+            userInput.value = '';
+            userInput.focus();
+        });
+
+        pauseBtn.addEventListener('click', () => {
+            isPaused = !isPaused;
+            pauseBtn.innerText = isPaused ? "Resume AI" : "Pause AI";
+            pauseBtn.classList.toggle('bg-amber-600');
+            pauseBtn.classList.toggle('bg-emerald-600');
+            chatWrapper.classList.toggle('paused');
+        });
+
+        clearChatBtn.addEventListener('click', () => {
+            chatBox.innerHTML = '<div class="ai-msg p-2 bg-slate-800/50 rounded-r-lg"><span class="text-sky-400 font-bold">SYSTEM:</span> Chat buffer cleared.</div>';
+        });
+
+        resetBtn.addEventListener('click', () => {
+            if(confirm("DANGER: This will permanently delete ALL level data and stats. Wipe everything?")) {
+                localStorage.removeItem('chaos_lab_save_v1');
+                currentNumber = 0;
+                stats = {
+                    highest: 0,
+                    lowest: Infinity,
+                    totalRuns: 0,
+                    sumOfFinals: 0,
+                    mistakes: Array(11).fill(0),
+                    peakEstimate: 10
+                };
+                initAgents();
+                document.getElementById('lastIndivAch').innerText = "None";
+                document.getElementById('lastGlobalAch').innerText = "None";
+                chatBox.innerHTML = '<div class="fail-msg p-2 bg-slate-800/50 rounded-r-lg"><span class="text-rose-400 font-bold">SYSTEM:</span> Full laboratory reset complete. Memory wiped.</div>';
+                updateStats();
+            }
+        });
+
+        // AI Loop
+        setInterval(() => {
+            if(!isPaused && Math.random() > 0.5) aiTurn();
+        }, 850);
+
+        // Autosave every 10 seconds
+        setInterval(saveData, 10000);
+
+        updateStats();
+    </script>
 </body>
-
 </html>
-
-
-
-
