@@ -435,7 +435,8 @@
                 
                 const count = currentCounts[item.id];
                 let saturationText = "";
-                if (count >= 5) saturationText = "FLOODED";
+                else if (count >= 10) saturationText = "ULTRA FLOODED";
+                else if (count >= 5) saturationText = "FLOODED";
                 else if (count === 1) saturationText = "UNIQUE";
 
                 return `
@@ -450,7 +451,7 @@
                             <div class="mt-2 flex flex-col items-center gap-0.5 border-t border-slate-700 pt-1">
                                 <span class="text-[7px] opacity-40 uppercase">Age: ${age}d</span>
                                 ${saturationText ? `<span class="text-[7px] font-black tracking-tighter ${count === 1 ? 'text-blue-400' : 'text-amber-600'}">${saturationText}</span>` : ''}
-                                ${isWorn ? `<span class="text-[7px] text-orange-500 font-black">-5% WORN</span>` : ''}
+                                ${isWorn ? `<span class="text-[7px] text-orange-500 font-black">-${wearCycles * 5}% WORN</span>` : ''}
                             </div>
                         </div>
                         <div class="absolute inset-0 bg-red-600/90 opacity-0 group-hover:opacity-100 flex items-center justify-center rounded-lg transition duration-150">
