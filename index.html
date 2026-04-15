@@ -3,517 +3,595 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI Counting Laboratory - POWER-UP EDITION</title>
+    <title>Shape Collector Simulator - V1.1</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&display=swap');
-        
         body {
             background-color: #0f172a;
-            color: #e2e8f0;
-            font-family: 'JetBrains+Mono', monospace;
+            color: #f8fafc;
+            font-family: 'Inter', sans-serif;
             overflow-x: hidden;
         }
+        .crate-card { transition: transform 0.2s, border-color 0.2s; }
+        .crate-card:hover { transform: translateY(-5px); }
+        
+        .rarity-common { color: #94a3b8; border-color: #475569; }
+        .rarity-uncommon { color: #4ade80; border-color: #166534; }
+        .rarity-rare { color: #60a5fa; border-color: #1e40af; }
+        .rarity-epic { color: #c084fc; border-color: #6b21a8; }
+        .rarity-legendary { color: #facc15; border-color: #854d0e; }
 
-        .chat-container::-webkit-scrollbar { width: 6px; }
-        .chat-container::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+        .bg-common { background: #1e293b; }
+        .bg-uncommon { background: #064e3b; }
+        .bg-rare { background: #1e3a8a; }
+        .bg-epic { background: #4c1d95; }
+        .bg-legendary { background: #713f12; }
 
-        .stat-card {
-            background: rgba(15, 23, 42, 0.8);
-            border: 1px solid #334155;
+        /* Shape Styles */
+        .shape-tiny-dot { width: 8px; height: 8px; background: currentColor; border-radius: 50%; }
+        .shape-dot { width: 16px; height: 16px; background: currentColor; border-radius: 50%; }
+        .shape-big-dot { width: 32px; height: 32px; background: currentColor; border-radius: 50%; }
+        
+        .shape-line { width: 30px; height: 4px; background: currentColor; border-radius: 2px; transform: rotate(-45deg); }
+        .shape-long-line { width: 50px; height: 4px; background: currentColor; border-radius: 2px; transform: rotate(-45deg); }
+        .shape-curved-line { 
+            width: 35px; height: 35px; 
+            border: 4px solid transparent; 
+            border-top: 4px solid currentColor; 
+            border-right: 4px solid currentColor; 
+            border-radius: 50%; 
+            transform: rotate(-45deg);
+        }
+
+        .shape-circle { width: 40px; height: 40px; border: 4px solid currentColor; border-radius: 50%; }
+        .shape-circle-full { width: 40px; height: 40px; background: currentColor; border-radius: 50%; }
+        .shape-semi-circle { 
+            width: 40px; height: 20px; 
+            background: currentColor; 
+            border-top-left-radius: 40px; 
+            border-top-right-radius: 40px; 
+        }
+
+        .shape-triangle { width: 0; height: 0; border-left: 20px solid transparent; border-right: 20px solid transparent; border-bottom: 35px solid currentColor; }
+        .shape-triangle-hollow { 
+            width: 0; height: 0; 
+            border-left: 20px solid transparent; border-right: 20px solid transparent; border-bottom: 35px solid currentColor;
             position: relative;
-            overflow: hidden;
+        }
+        .shape-triangle-hollow::after {
+            content: ''; position: absolute; left: -16px; top: 5px;
+            border-left: 16px solid transparent; border-right: 16px solid transparent; border-bottom: 28px solid #1e293b;
+        }
+        .shape-ext-triangle-hollow {
+            width: 40px; height: 35px;
+            border-left: 4px solid currentColor;
+            border-bottom: 4px solid currentColor;
+            position: relative;
+        }
+        .shape-ext-triangle-hollow::before {
+            content: ''; position: absolute; top: -2px; left: -2px;
+            width: 55px; height: 4px; background: currentColor;
+            transform: rotate(41deg); transform-origin: top left;
         }
 
-        .ai-msg { border-left: 4px solid #38bdf8; }
-        .user-msg { border-left: 4px solid #fbbf24; }
-        .fail-msg { border-left: 4px solid #f87171; background: rgba(127, 29, 29, 0.6); }
-        .reaction-msg { border-left: 2px dashed #64748b; font-style: italic; font-size: 0.85rem; opacity: 0.8; }
-        .achievement-msg { border-left: 4px solid #fbbf24; background: rgba(251, 191, 36, 0.15); font-weight: bold; color: #fbbf24; }
-        .power-msg { border-left: 4px solid #a855f7; background: rgba(168, 85, 247, 0.1); font-weight: bold; color: #d8b4fe; }
-        
-        @keyframes shake {
-            0% { transform: translate(1px, 1px) rotate(0deg); }
-            10px { transform: translate(-1px, -2px) rotate(-1deg); }
-            20% { transform: translate(-3px, 0px) rotate(1deg); }
-            100% { transform: translate(0px, 0px) rotate(0deg); }
-        }
-        .screen-shake { animation: shake 0.2s; }
+        .shape-square { width: 35px; height: 35px; border: 4px solid currentColor; }
+        .shape-square-full { width: 35px; height: 35px; background: currentColor; }
+        .shape-big-square-full { width: 50px; height: 50px; background: currentColor; }
 
-        .btn-control { transition: all 0.2s; text-transform: uppercase; font-size: 0.7rem; font-weight: bold; }
-        
-        .paused-overlay {
-            position: absolute; inset: 0; background: rgba(15, 23, 42, 0.8);
-            display: flex; align-items: center; justify-content: center;
-            z-index: 50; backdrop-filter: blur(2px); pointer-events: none; opacity: 0; transition: opacity 0.3s;
+        @keyframes popIn {
+            0% { transform: scale(0.9); opacity: 0; }
+            100% { transform: scale(1); opacity: 1; }
         }
-        .paused .paused-overlay { opacity: 1; }
-        
-        #saveIndicator {
-            position: fixed; bottom: 1rem; right: 1rem; font-size: 0.6rem;
-            color: #64748b; pointer-events: none; opacity: 0; transition: opacity 0.5s;
-        }
-        .saving #saveIndicator { opacity: 1; }
-
-        .power-btn:disabled { opacity: 0.3; cursor: not-allowed; filter: grayscale(1); }
-        
-        .safety-active { border: 2px solid #22c55e !important; box-shadow: 0 0 15px rgba(34, 197, 94, 0.3); }
+        .animate-pop { animation: popIn 0.3s ease-out forwards; }
+        .inventory-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: 10px; }
     </style>
 </head>
-<body class="p-2 md:p-4">
-    <div id="saveIndicator">SYNCING DATA...</div>
-    <div class="max-w-[1600px] mx-auto">
-        <header class="mb-4 text-center">
-            <h1 class="text-3xl font-bold text-rose-500 mb-1 tracking-widest uppercase">Chaos Counting Lab</h1>
-            <div class="flex justify-center gap-4 text-[10px] text-slate-500 font-bold">
-                <span id="aiBoostStatus" class="text-slate-500">BOOST: OFF</span>
-                <span>STAKES: SCALED</span>
-                <span>AUTOSAVE: ACTIVE</span>
-            </div>
-        </header>
+<body class="min-h-screen p-4 md:p-8 pb-32">
 
-        <!-- Player Controls & Powers -->
-        <div class="grid grid-cols-1 md:grid-cols-12 gap-4 mb-4">
-            <!-- Systems -->
-            <div class="stat-card p-3 rounded-lg flex flex-wrap items-center justify-between col-span-12 md:col-span-4 gap-2">
-                <button id="pauseBtn" class="btn-control bg-amber-600 hover:bg-amber-500 text-white px-3 py-2 rounded flex-1">Pause AI</button>
-                <button id="clearChatBtn" class="btn-control bg-sky-700 hover:bg-sky-600 text-white px-3 py-2 rounded flex-1">Clear Chat</button>
-                <button id="resetBtn" class="btn-control bg-slate-700 hover:bg-rose-600 text-white px-3 py-2 rounded flex-1">Hard Reset</button>
+    <div class="max-w-5xl mx-auto">
+        <!-- Header -->
+        <div class="flex flex-col md:flex-row justify-between items-start mb-8 bg-slate-800 p-6 rounded-2xl shadow-xl border border-slate-700 gap-4">
+            <div class="flex-1">
+                <h1 class="text-3xl font-bold bg-gradient-to-r from-teal-400 via-blue-400 to-indigo-500 bg-clip-text text-transparent">Shape Collector V1.1</h1>
+                <p class="text-[10px] text-slate-500 uppercase tracking-tighter">Demand Overhaul Update</p>
+                <div class="flex items-center gap-4 mt-1 text-slate-400 text-sm">
+                    <span>Day <span id="day-counter">1</span></span>
+                    <span>•</span>
+                    <span>Market Refresh: <span id="timer" class="font-mono text-blue-300">10:00</span></span>
+                </div>
             </div>
-            
-            <!-- Powers -->
-            <div class="stat-card p-3 rounded-lg col-span-12 md:col-span-8 flex flex-wrap gap-2 items-center">
-                <span class="text-[10px] text-slate-500 font-bold w-full md:w-auto mr-2">POWERS:</span>
-                <button id="powerSafety" class="power-btn btn-control bg-green-700 hover:bg-green-600 text-white px-3 py-2 rounded flex-1">
-                    Safety Net <span class="block text-[8px] opacity-70" id="cdSafety">Ready</span>
-                </button>
-                <button id="powerModel" class="power-btn btn-control bg-blue-700 hover:bg-blue-600 text-white px-3 py-2 rounded flex-1">
-                    Model Up <span class="block text-[8px] opacity-70" id="cdModel">Ready</span>
-                </button>
-                <button id="powerXP" class="power-btn btn-control bg-purple-700 hover:bg-purple-600 text-white px-3 py-2 rounded flex-1">
-                    5x XP <span class="block text-[8px] opacity-70" id="cdXP">Ready</span>
-                </button>
+            <div class="text-right">
+                <p class="text-sm text-slate-400">Balance</p>
+                <p class="text-2xl font-mono text-green-400" id="balance">$1,000</p>
+                <div class="flex gap-2 mt-2">
+                    <button onclick="nextDay()" class="px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded text-xs transition">Next Day</button>
+                    <button onclick="toggleInventory()" class="px-3 py-1 bg-blue-600 hover:bg-blue-500 rounded text-xs transition font-bold">Inventory (<span id="inv-count">0</span>/100)</button>
+                </div>
             </div>
         </div>
 
-        <div class="grid grid-cols-1 lg:grid-cols-4 gap-4">
-            <!-- Left Stats -->
-            <div class="space-y-3">
-                <div id="mainNumCard" class="stat-card p-3 rounded-lg border-rose-500/50">
-                    <p class="text-[10px] text-slate-500 uppercase font-bold">Current Number</p>
-                    <p id="currentNum" class="text-5xl font-black text-white">0</p>
-                    <p id="safetyText" class="text-[9px] text-green-400 mt-1 hidden font-bold">SAFETY NET: <span id="safetyVal">0</span></p>
-                </div>
-                <div class="stat-card p-3 rounded-lg border-amber-500/50">
-                    <p class="text-[10px] text-slate-500 uppercase font-bold">Your Personal Count</p>
-                    <p id="playerBest" class="text-3xl font-black text-amber-400">0</p>
-                </div>
-                <div class="stat-card p-3 rounded-lg">
-                    <p class="text-[10px] text-slate-500 uppercase font-bold">Peak Estimate</p>
-                    <p id="peakEstimate" class="text-xl font-bold text-emerald-400">10</p>
-                </div>
-                <!-- Mini Charts Area -->
-                <div class="stat-card p-2 rounded-lg h-40">
-                    <canvas id="avgChart"></canvas>
-                </div>
-                <div class="stat-card p-2 rounded-lg h-40">
-                    <canvas id="failChart"></canvas>
+        <!-- Crate Selection -->
+        <div id="crate-selection" class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+            <button onclick="openCrate('common_crate')" class="crate-card border-2 p-4 rounded-xl bg-slate-800 rarity-common flex flex-col items-center">
+                <span class="text-3xl mb-2">📦</span>
+                <span class="font-bold">Common</span>
+                <span class="text-xs opacity-70">FREE</span>
+            </button>
+            <button onclick="openCrate('uncommon_crate')" class="crate-card border-2 p-4 rounded-xl bg-slate-800 rarity-uncommon flex flex-col items-center">
+                <span class="text-3xl mb-2">🟢</span>
+                <span class="font-bold">Uncommon</span>
+                <span class="text-xs opacity-70">$100</span>
+            </button>
+            <button onclick="openCrate('rare_crate')" class="crate-card border-2 p-4 rounded-xl bg-slate-800 rarity-rare flex flex-col items-center">
+                <span class="text-3xl mb-2">🔵</span>
+                <span class="font-bold">Rare</span>
+                <span class="text-xs opacity-70">$500</span>
+            </button>
+            <button onclick="openCrate('epic_crate')" class="crate-card border-2 p-4 rounded-xl bg-slate-800 rarity-epic flex flex-col items-center">
+                <span class="text-3xl mb-2">🟣</span>
+                <span class="font-bold">Epic</span>
+                <span class="text-xs opacity-70">$2,000</span>
+            </button>
+            <button onclick="openCrate('legendary_crate')" class="crate-card border-2 p-4 rounded-xl bg-slate-800 rarity-legendary flex flex-col items-center">
+                <span class="text-3xl mb-2">👑</span>
+                <span class="font-bold">Legendary</span>
+                <span class="text-xs opacity-70">$10,000</span>
+            </button>
+        </div>
+
+        <!-- Inventory Panel (Toggled) -->
+        <div id="inventory-panel" class="hidden mb-8 bg-slate-900 border border-slate-700 rounded-2xl p-6 shadow-2xl animate-pop">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-bold">Your Inventory</h2>
+                <div class="flex gap-2">
+                    <button onclick="openBulkSell()" class="px-3 py-1 bg-red-900/40 hover:bg-red-900/60 text-red-200 border border-red-700 rounded text-xs">Bulk Sell Options</button>
+                    <button onclick="toggleInventory()" class="text-slate-400 hover:text-white">✕</button>
                 </div>
             </div>
-
-            <!-- Chat Area -->
-            <div id="chatWrapper" class="lg:col-span-2 flex flex-col h-[70vh] bg-slate-900 rounded-xl border-2 border-slate-800 overflow-hidden shadow-2xl relative">
-                <div class="paused-overlay text-amber-500 font-black text-2xl uppercase tracking-widest">AI Paused</div>
-                <div id="chatBox" class="chat-container flex-1 overflow-y-auto p-4 space-y-2">
-                    <div class="ai-msg p-2 bg-slate-800/50 rounded-r-lg">
-                        <span class="text-sky-400 font-bold">SYSTEM:</span> Initializing Lab. Powers, Rivalry, and Charts online.
-                    </div>
-                </div>
-                <div class="p-3 bg-slate-800 border-t border-slate-700">
-                    <form id="chatForm" class="flex gap-2">
-                        <input type="number" id="userInput" placeholder="HIT IT!" 
-                               class="flex-1 bg-slate-950 border border-slate-700 rounded px-4 py-2 focus:outline-none focus:ring-2 focus:ring-rose-500 font-bold text-xl text-white">
-                        <button type="submit" class="bg-rose-600 hover:bg-rose-500 text-white px-6 py-2 rounded font-black transition-all">
-                            SEND
-                        </button>
-                    </form>
-                </div>
+            <div id="inventory-list" class="inventory-grid max-h-96 overflow-y-auto pr-2">
+                <!-- Items appear here -->
             </div>
+        </div>
 
-            <!-- Right Column -->
-            <div class="space-y-3">
-                <!-- Leaderboard -->
-                <div class="stat-card p-3 rounded-lg">
-                    <p class="text-[10px] text-slate-400 uppercase font-bold mb-2">Internal Leaderboard</p>
-                    <div id="leaderboard" class="space-y-1 text-[11px]"></div>
-                </div>
-                
-                <div class="stat-card p-3 rounded-lg border-amber-500/30">
-                    <p class="text-[10px] text-slate-500 uppercase font-bold">Smartest AI</p>
-                    <p id="smartestAi" class="text-xl font-bold text-emerald-400">Loading...</p>
-                </div>
-                
-                <div class="p-2 bg-slate-800/50 rounded border border-slate-700 text-[9px] h-64 overflow-y-auto" id="levelDash">
-                </div>
+        <!-- History Log -->
+        <div class="mt-8">
+            <h3 class="text-sm font-bold mb-4 opacity-50 uppercase tracking-widest">Recent Activity</h3>
+            <div id="history-log" class="space-y-2">
+                <div class="text-slate-500 italic text-xs">No activity yet...</div>
             </div>
         </div>
     </div>
 
+    <!-- Result Modal -->
+    <div id="result-screen" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm p-4">
+        <div id="result-container" class="relative w-full max-w-md bg-slate-900 border-2 rounded-3xl overflow-hidden animate-pop shadow-2xl">
+            <div class="p-4 text-center border-b border-white/10">
+                <span id="rarity-text" class="uppercase tracking-widest font-black text-sm">RARITY</span>
+            </div>
+            <div class="p-8 flex flex-col items-center">
+                <div id="result-visual" class="mb-6 h-24 w-24 flex items-center justify-center"></div>
+                <h2 id="result-name" class="text-2xl font-bold mb-1 text-center">Item Name</h2>
+                <div class="flex gap-8 mt-4 text-center">
+                    <div>
+                        <p class="text-[10px] uppercase opacity-50">Market Value</p>
+                        <p id="result-price" class="text-green-400 font-mono font-bold text-lg">$0</p>
+                    </div>
+                    <div>
+                        <p class="text-[10px] uppercase opacity-50">Demand</p>
+                        <p id="result-demand" class="font-bold text-sm">OK</p>
+                    </div>
+                </div>
+            </div>
+            <div class="flex border-t border-white/10">
+                <button id="btn-sell-now" class="flex-1 py-4 bg-white/5 hover:bg-green-600/20 transition font-bold border-r border-white/10 text-green-400">SELL NOW</button>
+                <button id="btn-keep" class="flex-1 py-4 bg-white/5 hover:bg-blue-600/20 transition font-bold text-blue-400">KEEP ITEM</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bulk Sell Modal -->
+    <div id="bulk-sell-modal" class="hidden fixed inset-0 z-[60] flex items-center justify-center bg-black/80 p-4">
+        <div class="bg-slate-900 border border-slate-700 w-full max-w-sm rounded-2xl p-6 shadow-2xl">
+            <h3 class="text-lg font-bold mb-4">Bulk Sell Items</h3>
+            <div class="space-y-3">
+                <button onclick="bulkSell('all')" class="w-full p-3 bg-slate-800 hover:bg-slate-700 rounded-lg text-left flex justify-between transition">
+                    <span>Sell Everything</span>
+                    <span class="opacity-50 text-xs">Clear Inventory</span>
+                </button>
+                <button onclick="showRarityPicker()" class="w-full p-3 bg-slate-800 hover:bg-slate-700 rounded-lg text-left flex justify-between transition">
+                    <span>Sell by Rarity</span>
+                    <span class="opacity-50 text-xs">Choose Rarity</span>
+                </button>
+                <button onclick="showItemPicker()" class="w-full p-3 bg-slate-800 hover:bg-slate-700 rounded-lg text-left flex justify-between transition">
+                    <span>Sell by Shape</span>
+                    <span class="opacity-50 text-xs">Choose Item</span>
+                </button>
+            </div>
+            <button onclick="closeBulkSell()" class="mt-6 w-full py-2 text-slate-400 hover:text-white text-sm">Cancel</button>
+        </div>
+    </div>
+
     <script>
-        // --- DATA & STATE ---
-        let currentNumber = 0;
-        let playerBest = 0;
-        let isPaused = false;
-        let safetyNetValue = null;
-        let globalXPMultiplier = 1;
-        
-        let stats = {
-            highest: 0,
-            totalRuns: 0,
-            sumOfFinals: 0,
-            mistakes: Array(11).fill(0),
-            peakEstimate: 10,
-            avgHistory: [], // [avg, avg, avg]
-            failLabels: ["AI 1", "AI 2", "AI 3", "AI 4", "AI 5", "AI 6", "AI 7", "AI 8", "AI 9", "AI 10"]
+        // --- GAME STATE ---
+        let balance = 1000;
+        let day = 1;
+        let secondsRemaining = 600;
+        let inventory = [];
+        const INV_MAX = 100;
+
+        // TRACKING FOR V1.1 DEMAND OVERHAUL
+        let lastDayCollectionCount = {}; // Tracks how many of each item you had when the day flipped
+
+        const demandTiers = [
+            { id: 0, label: "Extremely Low", mult: 0.25, weight: 5 },
+            { id: 1, label: "Very Low", mult: 0.5, weight: 10 },
+            { id: 2, label: "Low", mult: 0.75, weight: 15 },
+            { id: 3, label: "Somewhat Low", mult: 0.9, weight: 20 },
+            { id: 4, label: "OK", mult: 1.0, weight: 40 },
+            { id: 5, label: "Somewhat High", mult: 1.5, weight: 20 },
+            { id: 6, label: "High", mult: 2.0, weight: 15 },
+            { id: 7, label: "Very High", mult: 2.5, weight: 10 },
+            { id: 8, label: "Extremely High", mult: 3.0, weight: 5 }
+        ];
+
+        const itemsConfig = {
+            common: [
+                { id: 'tiny_dot', name: "Tiny Dot", shape: "shape-tiny-dot", basePrice: 5, weight: 50 },
+                { id: 'dot', name: "Dot", shape: "shape-dot", basePrice: 10, weight: 35 },
+                { id: 'big_dot', name: "Big Dot", shape: "shape-big-dot", basePrice: 25, weight: 15 }
+            ],
+            uncommon: [
+                { id: 'line', name: "Line", shape: "shape-line", basePrice: 60, weight: 45 },
+                { id: 'long_line', name: "Long Line", shape: "shape-long-line", basePrice: 90, weight: 30 },
+                { id: 'curved_line', name: "Curved Line", shape: "shape-curved-line", basePrice: 100, weight: 25 }
+            ],
+            rare: [
+                { id: 'circle', name: "Hollow Circle", shape: "shape-circle", basePrice: 300, weight: 50 },
+                { id: 'semi_circle', name: "Semi-circle", shape: "shape-semi-circle", basePrice: 450, weight: 30 },
+                { id: 'circle_full', name: "Full Circle", shape: "shape-circle-full", basePrice: 650, weight: 20 }
+            ],
+            epic: [
+                { id: 'triangle_hollow', name: "Hollow Triangle", shape: "shape-triangle-hollow", basePrice: 1000, weight: 50 },
+                { id: 'ext_triangle_hollow', name: "Right Hollow Triangle", shape: "shape-ext-triangle-hollow", basePrice: 1500, weight: 30 },
+                { id: 'triangle', name: "Full Triangle", shape: "shape-triangle", basePrice: 2000, weight: 20 }
+            ],
+            legendary: [
+                { id: 'square', name: "Hollow Square", shape: "shape-square", basePrice: 6000, weight: 60 },
+                { id: 'square_full', name: "Full Square", shape: "shape-square-full", basePrice: 12000, weight: 30 },
+                { id: 'big_square_full', name: "Big Full Square", shape: "shape-big-square-full", basePrice: 25000, weight: 10 }
+            ]
         };
 
-        let cooldowns = {
-            safety: 0,
-            model: 0,
-            xp: 0
+        const crateConfigs = {
+            common_crate: { cost: 0, weights: { common: 75, uncommon: 20, rare: 4.5, epic: 0.45, legendary: 0.05 } },
+            uncommon_crate: { cost: 100, weights: { common: 20, uncommon: 60, rare: 15, epic: 4, legendary: 1 } },
+            rare_crate: { cost: 500, weights: { common: 5, uncommon: 15, rare: 65, epic: 10, legendary: 5 } },
+            epic_crate: { cost: 2000, weights: { common: 1, uncommon: 3, rare: 11, epic: 70, legendary: 15 } },
+            legendary_crate: { cost: 10000, weights: { common: 0.5, uncommon: 1, rare: 3.5, epic: 15, legendary: 80 } }
         };
 
-        let agents = [];
-        const globalMilestones = [25, 50, 100, 250, 500, 1000, 2500, 5000];
-
-        function initAgents() {
-            agents = Array.from({ length: 10 }, (_, i) => ({
-                id: i + 1,
-                level: 1,
-                xp: 0,
-                name: `AI ${i + 1}`
-            }));
-        }
-
-        // --- CHARTS ---
-        let avgChart, failChart;
-        function initCharts() {
-            const avgCtx = document.getElementById('avgChart').getContext('2d');
-            avgChart = new Chart(avgCtx, {
-                type: 'line',
-                data: {
-                    labels: [],
-                    datasets: [{
-                        label: 'Average Score',
-                        data: [],
-                        borderColor: '#a855f7',
-                        tension: 0.3,
-                        pointRadius: 0
-                    }]
-                },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { display: false }, y: { grid: { color: '#334155' } } } }
-            });
-
-            const failCtx = document.getElementById('failChart').getContext('2d');
-            failChart = new Chart(failCtx, {
-                type: 'bar',
-                data: {
-                    labels: stats.failLabels,
-                    datasets: [{
-                        label: 'Fails',
-                        data: stats.mistakes.slice(1),
-                        backgroundColor: '#f43f5e'
-                    }]
-                },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { ticks: { font: { size: 8 } } }, y: { grid: { color: '#334155' } } } }
-            });
-        }
-
-        // --- PERSISTENCE ---
-        function saveData() {
-            const data = {
-                stats, agents, currentNumber, playerBest, cooldowns,
-                timestamp: Date.now()
-            };
-            localStorage.setItem('chaos_lab_v2', JSON.stringify(data));
-            document.body.classList.add('saving');
-            setTimeout(() => document.body.classList.remove('saving'), 800);
-        }
-
-        function loadData() {
-            const saved = localStorage.getItem('chaos_lab_v2');
-            if (saved) {
-                const data = JSON.parse(saved);
-                stats = data.stats;
-                agents = data.agents;
-                currentNumber = data.currentNumber || 0;
-                playerBest = data.playerBest || 0;
-                cooldowns = data.cooldowns || cooldowns;
-                
-                // Redraw charts with loaded data
-                avgChart.data.labels = stats.avgHistory.map((_, i) => i);
-                avgChart.data.datasets[0].data = stats.avgHistory;
-                avgChart.update();
-                failChart.data.datasets[0].data = stats.mistakes.slice(1);
-                failChart.update();
-                return true;
-            }
-            return false;
-        }
-
-        // --- UTILS ---
-        const getXpNeeded = (level) => level * 10;
-
-        function updateUI() {
-            document.getElementById('currentNum').innerText = currentNumber;
-            document.getElementById('playerBest').innerText = playerBest;
-            document.getElementById('peakEstimate').innerText = Math.round(stats.peakEstimate);
-            
-            // AI Rivalry Status
-            const isBoosted = currentNumber > playerBest;
-            const boostEl = document.getElementById('aiBoostStatus');
-            boostEl.innerText = isBoosted ? "BOOST: 3X XP ACTIVE" : "BOOST: OFF";
-            boostEl.className = isBoosted ? "text-emerald-400 animate-pulse font-black" : "text-slate-500 font-bold";
-
-            // Leaderboard & Dash
-            let smartest = agents[0];
-            let dashHtml = "";
-            let sorted = [...agents].sort((a, b) => (b.level * 100 + b.xp) - (a.level * 100 + a.xp));
-            
-            let leaderHtml = "";
-            sorted.forEach((a, i) => {
-                if (i === 0) smartest = a;
-                leaderHtml += `<div class="flex justify-between"><span>#${i+1} ${a.name}</span> <span class="text-sky-400">Lv ${a.level}</span></div>`;
-                dashHtml += `<div class="mb-1 border-b border-slate-700/50 pb-1">${a.name}: Lv ${a.level} [${a.xp}/${getXpNeeded(a.level)} XP]</div>`;
-            });
-
-            document.getElementById('leaderboard').innerHTML = leaderHtml;
-            document.getElementById('levelDash').innerHTML = dashHtml;
-            document.getElementById('smartestAi').innerText = `${smartest.name} (Lv ${smartest.level})`;
-
-            // Cooldowns
-            updateCooldownButton('powerSafety', 'cdSafety', cooldowns.safety);
-            updateCooldownButton('powerModel', 'cdModel', cooldowns.model);
-            updateCooldownButton('powerXP', 'cdXP', cooldowns.xp);
-        }
-
-        function updateCooldownButton(btnId, textId, cd) {
-            const btn = document.getElementById(btnId);
-            const txt = document.getElementById(textId);
-            const now = Date.now();
-            if (cd > now) {
-                btn.disabled = true;
-                const rem = Math.ceil((cd - now) / 1000);
-                txt.innerText = `${Math.floor(rem/60)}m ${rem%60}s`;
-            } else {
-                btn.disabled = false;
-                txt.innerText = "Ready";
-            }
-        }
-
-        function addMessage(sender, text, type = 'ai', agent = null) {
-            const div = document.createElement('div');
-            let bgClass = 'ai-msg';
-            let colorClass = 'text-sky-400';
-
-            if(type === 'user') { bgClass = 'user-msg'; colorClass = 'text-amber-400'; }
-            if(type === 'fail') { bgClass = 'fail-msg'; colorClass = 'text-rose-400'; }
-            if(type === 'reaction') { bgClass = 'reaction-msg'; colorClass = 'text-slate-500'; }
-            if(type === 'achievement') { bgClass = 'achievement-msg'; colorClass = 'text-amber-500'; }
-            if(type === 'power') { bgClass = 'power-msg'; colorClass = 'text-purple-300'; }
-
-            div.className = `${bgClass} p-2 bg-slate-800/30 rounded-r shadow-sm transition-all`;
-            div.innerHTML = `<span class="${colorClass} font-bold">${sender}:</span> ${text}`;
-            chatBox.appendChild(div);
-            chatBox.scrollTop = chatBox.scrollHeight;
-            if(chatBox.children.length > 50) chatBox.removeChild(chatBox.firstChild);
-        }
+        let itemMarket = {};
 
         // --- CORE LOGIC ---
-        function handleFailure(culpritId) {
-            document.body.classList.add('screen-shake');
-            setTimeout(() => document.body.classList.remove('screen-shake'), 200);
 
-            addMessage('SYSTEM', `FAILURE. Chain broken at ${currentNumber}.`, 'fail');
-            
-            stats.totalRuns++;
-            stats.sumOfFinals += currentNumber;
-            stats.mistakes[culpritId]++;
-            
-            // Add to Chart
-            const newAvg = stats.sumOfFinals / stats.totalRuns;
-            stats.avgHistory.push(parseFloat(newAvg.toFixed(2)));
-            avgChart.data.labels.push(stats.totalRuns);
-            avgChart.data.datasets[0].data.push(newAvg);
-            avgChart.update();
-            failChart.data.datasets[0].data = stats.mistakes.slice(1);
-            failChart.update();
-
-            if (culpritId > 0) {
-                const a = agents[culpritId-1];
-                const penalty = 5 + (a.level * 2);
-                a.xp -= penalty;
-                while(a.xp < 0 && a.level > 1) { a.level--; a.xp += getXpNeeded(a.level); }
-                if(a.level === 1 && a.xp < 0) a.xp = 0;
-            }
-
-            // Safety Net Logic
-            if (safetyNetValue !== null) {
-                addMessage('SAFETY NET', `Shield triggered! Reverting to ${safetyNetValue} instead of 0.`, 'power');
-                currentNumber = safetyNetValue;
-            } else {
-                currentNumber = 0;
-            }
-
-            updateUI();
-            saveData();
-        }
-
-        function handleSuccess(newNum, agentId) {
-            const wasBelow = currentNumber <= playerBest;
-            currentNumber = newNum;
-            const isNowAbove = currentNumber > playerBest;
-
-            if (wasBelow && isNowAbove && playerBest > 0) {
-                addMessage('SYSTEM', 'AI HAS SURPASSED PLAYER COUNT! 3x XP ENABLED!', 'achievement');
-                agents.forEach(a => addMessage(a.name, "YES! WE ARE SUPERIOR!", "reaction"));
-            }
-
-            if(agentId > 0) {
-                const a = agents[agentId-1];
-                let xpGain = 1;
+        function randomizeMarket() {
+            // V1.1 Logic: Calculate the weight adjustments based on previous day collection
+            Object.values(itemsConfig).flat().forEach(item => {
+                const count = lastDayCollectionCount[item.id] || 0;
                 
-                // Apply Multipliers
-                if (currentNumber > playerBest) xpGain *= 3;
-                xpGain *= globalXPMultiplier;
+                // Base luck factors
+                let marketWeights = demandTiers.map(t => ({...t}));
 
-                a.xp += xpGain;
+                if (count > 0) {
+                    // SATURATION SYSTEM:
+                    // If you have many (e.g. 5+), the weights shift towards LOWER demand.
+                    // If you have few (e.g. 1), the weights shift towards HIGHER demand.
+                    
+                    marketWeights = marketWeights.map(tier => {
+                        let adjustment = 1.0;
+                        
+                        if (count === 1) {
+                            // Rare item bonus: Double the chance for high demand
+                            if (tier.id >= 5) adjustment = 2.0;
+                            if (tier.id <= 2) adjustment = 0.5;
+                        } else if (count >= 5) {
+                            // Flooded market penalty: Double the chance for low demand
+                            if (tier.id <= 3) adjustment = 2.0;
+                            if (tier.id >= 6) adjustment = 0.3;
+                        } else if (count >= 2) {
+                            // Moderate: Slight push towards mid-low
+                            if (tier.id <= 4) adjustment = 1.3;
+                        }
 
-                // Achievement logic
-                if (newNum % 25 === 0) {
-                    const bonus = Math.round(newNum * 0.1 * xpGain);
-                    a.xp += bonus;
-                    addMessage('ACHIEVEMENT', `${a.name} hit ${newNum}! Huge XP Bonus!`, 'achievement');
-                }
-
-                while(a.xp >= getXpNeeded(a.level)) {
-                    a.xp -= getXpNeeded(a.level);
-                    a.level++;
-                }
-            }
-
-            if (currentNumber > stats.highest) {
-                stats.highest = currentNumber;
-                stats.peakEstimate = Math.max(stats.peakEstimate, currentNumber * 1.5);
-            }
-            updateUI();
-        }
-
-        function aiTurn() {
-            if (isPaused) return;
-            const agent = agents[Math.floor(Math.random() * 10)];
-            const nextNum = currentNumber + 1;
-            const failChance = Math.max(0.01, (nextNum / (15 + (agent.level * 20))) * 0.1);
-            
-            setTimeout(() => {
-                if (isPaused || currentNumber + 1 !== nextNum) return;
-                if (Math.random() < failChance) {
-                    handleFailure(agent.id);
+                        return { ...tier, adjustedWeight: tier.weight * adjustment };
+                    });
                 } else {
-                    handleSuccess(nextNum, agent.id);
-                    addMessage(agent.name, nextNum, 'ai', agent);
-                    if(Math.random() > 0.3) aiTurn();
+                    // If you have none, it's just standard weights
+                    marketWeights = marketWeights.map(t => ({...t, adjustedWeight: t.weight}));
                 }
-            }, 100 + Math.random() * 400);
+
+                // Roll based on adjusted weights
+                const totalWeight = marketWeights.reduce((a, b) => a + b.adjustedWeight, 0);
+                let random = Math.random() * totalWeight;
+                for (const tier of marketWeights) {
+                    if (random < tier.adjustedWeight) {
+                        itemMarket[item.id] = tier;
+                        break;
+                    }
+                    random -= tier.adjustedWeight;
+                }
+            });
+            renderInventory(); 
         }
 
-        // --- BUTTONS & INPUT ---
-        chatForm.addEventListener('submit', (e) => {
-            e.preventDefault();
-            const val = parseInt(userInput.value);
-            if(isNaN(val)) return;
-            const expected = currentNumber + 1;
-            
-            addMessage('YOU', val, 'user');
-            if(val === expected) {
-                if (val > playerBest) {
-                    playerBest = val;
-                    // If AI was above and we just caught them
-                    if (currentNumber > playerBest - 1) {
-                        addMessage('SYSTEM', 'PLAYER SURPASSED AI!', 'achievement');
-                        agents.forEach(a => addMessage(a.name, "NOOO! Recalculating...", "reaction"));
-                    }
-                }
-                handleSuccess(val, 0);
-                if(!isPaused) aiTurn();
-            } else {
-                handleFailure(0);
+        function nextDay() {
+            // Update lastDayCollectionCount before moving to next day
+            const counts = {};
+            inventory.forEach(item => {
+                counts[item.id] = (counts[item.id] || 0) + 1;
+            });
+            lastDayCollectionCount = counts;
+
+            day++;
+            secondsRemaining = 600;
+            randomizeMarket();
+
+            // Age the items in the inventory
+            inventory.forEach(item => {
+                item.ageDays = (item.ageDays || 0) + 1;
+            });
+
+            updateUI();
+            logHistory(`Day ${day}: Market updated based on your inventory!`, 'info');
+        }
+
+        function calculateSellPrice(invItem) {
+            const market = itemMarket[invItem.id] || demandTiers[4]; // Default to OK
+            const age = invItem.ageDays || 0;
+            const wearCycles = Math.floor(age / 5);
+            const itemWearMult = Math.pow(0.95, wearCycles);
+
+            return Math.floor(invItem.basePrice * market.mult * itemWearMult);
+        }
+
+        function openCrate(type) {
+            const config = crateConfigs[type];
+            if (balance < config.cost) {
+                showToast("Not enough Credits!");
+                return;
             }
-            userInput.value = '';
-        });
-
-        document.getElementById('powerSafety').addEventListener('click', () => {
-            safetyNetValue = currentNumber;
-            cooldowns.safety = Date.now() + (5 * 60 * 1000);
-            document.getElementById('mainNumCard').classList.add('safety-active');
-            document.getElementById('safetyText').classList.remove('hidden');
-            document.getElementById('safetyVal').innerText = safetyNetValue;
-            addMessage('POWER', `Safety Net deployed at ${safetyNetValue}! Valid for 2 minutes.`, 'power');
-            
-            setTimeout(() => {
-                safetyNetValue = null;
-                document.getElementById('mainNumCard').classList.remove('safety-active');
-                document.getElementById('safetyText').classList.add('hidden');
-                addMessage('SYSTEM', 'Safety Net has expired.', 'reaction');
-            }, 2 * 60 * 1000);
-            updateUI();
-        });
-
-        document.getElementById('powerModel').addEventListener('click', () => {
-            agents.forEach(a => { a.level++; a.xp = 0; });
-            cooldowns.model = Date.now() + (10 * 60 * 1000);
-            addMessage('POWER', 'Global Model Improvement: All AIs +1 Level!', 'power');
-            updateUI();
-        });
-
-        document.getElementById('powerXP').addEventListener('click', () => {
-            globalXPMultiplier = 5;
-            cooldowns.xp = Date.now() + (20 * 60 * 1000);
-            addMessage('POWER', 'XP OVERLOAD: 5x Multiplier for 1 minute!', 'power');
-            
-            setTimeout(() => {
-                globalXPMultiplier = 1;
-                addMessage('SYSTEM', 'XP Multiplier returned to normal.', 'reaction');
-            }, 60 * 1000);
-            updateUI();
-        });
-
-        pauseBtn.addEventListener('click', () => {
-            isPaused = !isPaused;
-            pauseBtn.innerText = isPaused ? "Resume AI" : "Pause AI";
-            chatWrapper.classList.toggle('paused');
-        });
-
-        clearChatBtn.addEventListener('click', () => {
-            chatBox.innerHTML = '<div class="ai-msg p-2 bg-slate-800/50 rounded-r-lg"><span class="text-sky-400 font-bold">SYSTEM:</span> Chat buffer cleared.</div>';
-        });
-
-        resetBtn.addEventListener('click', () => {
-            if(confirm("HARD RESET: This will wipe all AI levels, XP, and chart data. Continue?")) {
-                localStorage.removeItem('chaos_lab_v2');
-                location.reload();
+            if (inventory.length >= INV_MAX) {
+                showToast("Inventory Full (100/100)!");
+                return;
             }
-        });
 
-        // --- INIT ---
-        initAgents();
-        initCharts();
-        loadData();
+            balance -= config.cost;
+            updateUI();
+
+            const rarity = rollRarity(config.weights);
+            const itemBase = rollFromWeightedList(itemsConfig[rarity]);
+            const demand = itemMarket[itemBase.id] || demandTiers[4];
+            
+            const freshPrice = Math.floor(itemBase.basePrice * demand.mult);
+
+            // Modal Setup
+            const modal = document.getElementById('result-screen');
+            const container = document.getElementById('result-container');
+            const rarityClasses = { 
+                common: 'rarity-common bg-common', 
+                uncommon: 'rarity-uncommon bg-uncommon', 
+                rare: 'rarity-rare bg-rare', 
+                epic: 'rarity-epic bg-epic', 
+                legendary: 'rarity-legendary bg-legendary' 
+            };
+            
+            container.className = `relative w-full max-w-md border-2 rounded-3xl overflow-hidden animate-pop shadow-2xl ${rarityClasses[rarity]}`;
+            document.getElementById('rarity-text').innerText = rarity.toUpperCase();
+            document.getElementById('result-name').innerText = itemBase.name;
+            document.getElementById('result-visual').innerHTML = `<div class="${itemBase.shape}"></div>`;
+            document.getElementById('result-price').innerText = `$${freshPrice.toLocaleString()}`;
+            document.getElementById('result-demand').innerText = demand.label;
+            
+            modal.classList.remove('hidden');
+
+            document.getElementById('btn-sell-now').onclick = () => {
+                balance += freshPrice;
+                logHistory(`Sold ${itemBase.name} for $${freshPrice}`, rarity);
+                closeResult();
+                updateUI();
+            };
+
+            document.getElementById('btn-keep').onclick = () => {
+                inventory.push({ ...itemBase, rarity, ageDays: 0 });
+                logHistory(`Kept ${itemBase.name}`, rarity);
+                closeResult();
+                updateUI();
+                renderInventory();
+            };
+        }
+
+        // --- INVENTORY & UI ---
+
+        function renderInventory() {
+            const list = document.getElementById('inventory-list');
+            document.getElementById('inv-count').innerText = inventory.length;
+            
+            if (inventory.length === 0) {
+                list.innerHTML = '<div class="col-span-full py-10 text-center text-slate-600 text-sm">Inventory is empty. Get some crates!</div>';
+                return;
+            }
+
+            // Get counts of items currently in inventory to show "Saturation" hint
+            const currentCounts = {};
+            inventory.forEach(item => currentCounts[item.id] = (currentCounts[item.id] || 0) + 1);
+
+            list.innerHTML = inventory.map((item, index) => {
+                const sellPrice = calculateSellPrice(item);
+                const market = itemMarket[item.id] || demandTiers[4];
+                const demandColor = market.mult > 1 ? 'text-green-400' : (market.mult < 1 ? 'text-red-400' : 'text-slate-400');
+                const age = item.ageDays || 0;
+                const wearCycles = Math.floor(age / 5);
+                const isWorn = wearCycles > 0;
+                
+                const count = currentCounts[item.id];
+                let saturationText = "";
+                if (count >= 5) saturationText = "FLOODED";
+                else if (count === 1) saturationText = "UNIQUE";
+
+                return `
+                    <div class="bg-slate-800 border border-slate-700 rounded-lg p-3 text-center flex flex-col items-center justify-between group relative cursor-pointer hover:border-blue-500 transition min-h-[165px]" onclick="sellItem(${index})">
+                        <div class="scale-90 mb-2 flex items-center justify-center h-12 w-full ${item.rarity}-text">
+                            <div class="${item.shape}"></div>
+                        </div>
+                        <div class="w-full">
+                            <p class="text-[9px] truncate font-bold uppercase opacity-60 mb-1 leading-tight">${item.name}</p>
+                            <p class="text-xs font-mono font-bold text-green-400">$${sellPrice.toLocaleString()}</p>
+                            <p class="text-[8px] font-bold ${demandColor} uppercase">${market.label}</p>
+                            <div class="mt-2 flex flex-col items-center gap-0.5 border-t border-slate-700 pt-1">
+                                <span class="text-[7px] opacity-40 uppercase">Age: ${age}d</span>
+                                ${saturationText ? `<span class="text-[7px] font-black tracking-tighter ${count === 1 ? 'text-blue-400' : 'text-amber-600'}">${saturationText}</span>` : ''}
+                                ${isWorn ? `<span class="text-[7px] text-orange-500 font-black">-5% WORN</span>` : ''}
+                            </div>
+                        </div>
+                        <div class="absolute inset-0 bg-red-600/90 opacity-0 group-hover:opacity-100 flex items-center justify-center rounded-lg transition duration-150">
+                            <span class="text-xs font-black tracking-widest">SELL</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function sellItem(index) {
+            const item = inventory[index];
+            const price = calculateSellPrice(item);
+            balance += price;
+            inventory.splice(index, 1);
+            updateUI();
+            renderInventory();
+            logHistory(`Sold ${item.name} for $${price}`, item.rarity);
+        }
+
+        function bulkSell(type, filterValue) {
+            let toSell = [];
+            let remaining = [];
+
+            if (type === 'all') {
+                toSell = [...inventory];
+                inventory = [];
+            } else if (type === 'rarity') {
+                inventory.forEach(item => {
+                    if (item.rarity === filterValue) toSell.push(item);
+                    else remaining.push(item);
+                });
+                inventory = remaining;
+            } else if (type === 'item') {
+                inventory.forEach(item => {
+                    if (item.id === filterValue) toSell.push(item);
+                    else remaining.push(item);
+                });
+                inventory = remaining;
+            }
+
+            let totalGain = 0;
+            toSell.forEach(item => totalGain += calculateSellPrice(item));
+            
+            balance += totalGain;
+            if (toSell.length > 0) {
+                showToast(`Sold ${toSell.length} items for $${totalGain.toLocaleString()}!`);
+            }
+            closeBulkSell();
+            updateUI();
+            renderInventory();
+        }
+
+        function showRarityPicker() {
+            const rarities = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
+            const choice = prompt("Type rarity to sell: (common, uncommon, rare, epic, legendary)");
+            if (choice && rarities.includes(choice.toLowerCase())) {
+                bulkSell('rarity', choice.toLowerCase());
+            }
+        }
+
+        function showItemPicker() {
+            const allItems = Object.values(itemsConfig).flat();
+            const names = allItems.map(i => i.name).join(', ');
+            const choice = prompt(`Type name to sell: \n\nOptions: ${names}`);
+            const itemMatch = allItems.find(i => i.name.toLowerCase() === choice?.toLowerCase());
+            if (itemMatch) {
+                bulkSell('item', itemMatch.id);
+            }
+        }
+
+        function toggleInventory() {
+            const el = document.getElementById('inventory-panel');
+            el.classList.toggle('hidden');
+            if (!el.classList.contains('hidden')) renderInventory();
+        }
+
+        function openBulkSell() { document.getElementById('bulk-sell-modal').classList.remove('hidden'); }
+        function closeBulkSell() { document.getElementById('bulk-sell-modal').classList.add('hidden'); }
+        function closeResult() { document.getElementById('result-screen').classList.add('hidden'); }
+
+        // --- HELPERS ---
+
+        function updateUI() {
+            document.getElementById('balance').innerText = `$${Math.floor(balance).toLocaleString()}`;
+            document.getElementById('day-counter').innerText = day;
+            document.getElementById('inv-count').innerText = inventory.length;
+        }
+
+        function startTimer() {
+            setInterval(() => {
+                secondsRemaining--;
+                if (secondsRemaining <= 0) nextDay();
+                const mins = Math.floor(secondsRemaining / 60);
+                const secs = Math.floor(secondsRemaining % 60);
+                document.getElementById('timer').innerText = `${mins}:${secs.toString().padStart(2, '0')}`;
+            }, 1000);
+        }
+
+        function rollRarity(weights) {
+            const total = Object.values(weights).reduce((a, b) => a + b, 0);
+            let r = Math.random() * total;
+            for (const [rarity, w] of Object.entries(weights)) {
+                if (r < w) return rarity;
+                r -= w;
+            }
+            return 'common';
+        }
+
+        function rollFromWeightedList(list) {
+            const total = list.reduce((a, b) => a + b.weight, 0);
+            let r = Math.random() * total;
+            for (const item of list) {
+                if (r < item.weight) return item;
+                r -= item.weight;
+            }
+        }
+
+        function logHistory(msg, rarity) {
+            const log = document.getElementById('history-log');
+            if (log.children[0]?.classList.contains('italic')) log.innerHTML = '';
+            const div = document.createElement('div');
+            const colorClass = rarity === 'info' ? 'text-blue-400' : `rarity-${rarity}`;
+            div.className = `p-2 bg-slate-800/40 rounded border-l-2 text-[11px] ${colorClass}`;
+            div.innerText = `[${new Date().toLocaleTimeString([], {hour:'2-digit', minute:'2-digit'})}] ${msg}`;
+            log.prepend(div);
+            if (log.children.length > 6) log.removeChild(log.lastChild);
+        }
+
+        function showToast(msg) {
+            const t = document.createElement('div');
+            t.className = "fixed top-10 left-1/2 -translate-x-1/2 bg-blue-600 text-white px-6 py-3 rounded-full shadow-2xl z-[100] animate-bounce text-sm font-bold pointer-events-none";
+            t.innerText = msg;
+            document.body.appendChild(t);
+            setTimeout(() => t.remove(), 2500);
+        }
+
+        // Init
+        randomizeMarket();
         updateUI();
-        setInterval(updateUI, 1000);
-        setInterval(saveData, 10000);
-        setInterval(() => { if(!isPaused && Math.random() > 0.4) aiTurn(); }, 1200);
+        startTimer();
     </script>
 </body>
 </html>
