@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Shape Collector Simulator - V1.1</title>
+    <title>Shape Collector Simulator - V1.1.1</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body {
@@ -20,12 +20,14 @@
         .rarity-rare { color: #60a5fa; border-color: #1e40af; }
         .rarity-epic { color: #c084fc; border-color: #6b21a8; }
         .rarity-legendary { color: #facc15; border-color: #854d0e; }
+        .rarity-crazy { color: #f43f5e; border-color: #881337; }
 
         .bg-common { background: #1e293b; }
         .bg-uncommon { background: #064e3b; }
         .bg-rare { background: #1e3a8a; }
         .bg-epic { background: #4c1d95; }
         .bg-legendary { background: #713f12; }
+        .bg-crazy { background: #4c0519; }
 
         /* Shape Styles */
         .shape-tiny-dot { width: 8px; height: 8px; background: currentColor; border-radius: 50%; }
@@ -78,6 +80,29 @@
         .shape-square-full { width: 35px; height: 35px; background: currentColor; }
         .shape-big-square-full { width: 50px; height: 50px; background: currentColor; }
 
+        /* Pentagon Construction using Clip-path */
+        .shape-pentagon-hollow {
+            width: 45px; height: 45px;
+            background: currentColor;
+            clip-path: polygon(50% 0%, 100% 38%, 82% 100%, 18% 100%, 0% 38%);
+            position: relative;
+        }
+        .shape-pentagon-hollow::after {
+            content: ''; position: absolute; inset: 4px;
+            background: #1e293b; /* Matches inventory bg */
+            clip-path: polygon(50% 0%, 100% 38%, 82% 100%, 18% 100%, 0% 38%);
+        }
+        .shape-pentagon-full {
+            width: 45px; height: 45px;
+            background: currentColor;
+            clip-path: polygon(50% 0%, 100% 38%, 82% 100%, 18% 100%, 0% 38%);
+        }
+        .shape-big-pentagon-full {
+            width: 80; height: 80;
+            background: currentColor;
+            clip-path: polygon(50% 0%, 100% 38%, 82% 100%, 18% 100%, 0% 38%);
+        }
+
         @keyframes popIn {
             0% { transform: scale(0.9); opacity: 0; }
             100% { transform: scale(1); opacity: 1; }
@@ -92,8 +117,8 @@
         <!-- Header -->
         <div class="flex flex-col md:flex-row justify-between items-start mb-8 bg-slate-800 p-6 rounded-2xl shadow-xl border border-slate-700 gap-4">
             <div class="flex-1">
-                <h1 class="text-3xl font-bold bg-gradient-to-r from-teal-400 via-blue-400 to-indigo-500 bg-clip-text text-transparent">Shape Collector V1.1</h1>
-                <p class="text-[10px] text-slate-500 uppercase tracking-tighter">Demand Overhaul Update</p>
+                <h1 class="text-3xl font-bold bg-gradient-to-r from-teal-400 via-rose-500 to-indigo-500 bg-clip-text text-transparent">Shape Collector V1.1.1</h1>
+                <p class="text-[10px] text-slate-500 uppercase tracking-tighter">The Crazy Update</p>
                 <div class="flex items-center gap-4 mt-1 text-slate-400 text-sm">
                     <span>Day <span id="day-counter">1</span></span>
                     <span>•</span>
@@ -102,7 +127,7 @@
             </div>
             <div class="text-right">
                 <p class="text-sm text-slate-400">Balance</p>
-                <p class="text-2xl font-mono text-green-400" id="balance">$1,000</p>
+                <p class="text-2xl font-mono text-green-400" id="balance">$200,000</p>
                 <div class="flex gap-2 mt-2">
                     <button onclick="nextDay()" class="px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded text-xs transition">Next Day</button>
                     <button onclick="toggleInventory()" class="px-3 py-1 bg-blue-600 hover:bg-blue-500 rounded text-xs transition font-bold">Inventory (<span id="inv-count">0</span>/100)</button>
@@ -111,31 +136,36 @@
         </div>
 
         <!-- Crate Selection -->
-        <div id="crate-selection" class="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+        <div id="crate-selection" class="grid grid-cols-2 md:grid-cols-6 gap-4 mb-8">
             <button onclick="openCrate('common_crate')" class="crate-card border-2 p-4 rounded-xl bg-slate-800 rarity-common flex flex-col items-center">
-                <span class="text-3xl mb-2">📦</span>
-                <span class="font-bold">Common</span>
-                <span class="text-xs opacity-70">FREE</span>
+                <span class="text-2xl mb-1">📦</span>
+                <span class="font-bold text-sm">Common</span>
+                <span class="text-[10px] opacity-70">FREE</span>
             </button>
             <button onclick="openCrate('uncommon_crate')" class="crate-card border-2 p-4 rounded-xl bg-slate-800 rarity-uncommon flex flex-col items-center">
-                <span class="text-3xl mb-2">🟢</span>
-                <span class="font-bold">Uncommon</span>
-                <span class="text-xs opacity-70">$100</span>
+                <span class="text-2xl mb-1">🟢</span>
+                <span class="font-bold text-sm">Uncommon</span>
+                <span class="text-[10px] opacity-70">$100</span>
             </button>
             <button onclick="openCrate('rare_crate')" class="crate-card border-2 p-4 rounded-xl bg-slate-800 rarity-rare flex flex-col items-center">
-                <span class="text-3xl mb-2">🔵</span>
-                <span class="font-bold">Rare</span>
-                <span class="text-xs opacity-70">$500</span>
+                <span class="text-2xl mb-1">🔵</span>
+                <span class="font-bold text-sm">Rare</span>
+                <span class="text-[10px] opacity-70">$500</span>
             </button>
             <button onclick="openCrate('epic_crate')" class="crate-card border-2 p-4 rounded-xl bg-slate-800 rarity-epic flex flex-col items-center">
-                <span class="text-3xl mb-2">🟣</span>
-                <span class="font-bold">Epic</span>
-                <span class="text-xs opacity-70">$2,000</span>
+                <span class="text-2xl mb-1">🟣</span>
+                <span class="font-bold text-sm">Epic</span>
+                <span class="text-[10px] opacity-70">$2,000</span>
             </button>
             <button onclick="openCrate('legendary_crate')" class="crate-card border-2 p-4 rounded-xl bg-slate-800 rarity-legendary flex flex-col items-center">
-                <span class="text-3xl mb-2">👑</span>
-                <span class="font-bold">Legendary</span>
-                <span class="text-xs opacity-70">$10,000</span>
+                <span class="text-2xl mb-1">👑</span>
+                <span class="font-bold text-sm">Legendary</span>
+                <span class="text-[10px] opacity-70">$10,000</span>
+            </button>
+            <button onclick="openCrate('crazy_crate')" class="crate-card border-2 p-4 rounded-xl bg-slate-800 rarity-crazy flex flex-col items-center">
+                <span class="text-2xl mb-1">C</span>
+                <span class="font-bold text-sm">Crazy</span>
+                <span class="text-[10px] opacity-70">$200,000</span>
             </button>
         </div>
 
@@ -202,10 +232,6 @@
                     <span>Sell by Rarity</span>
                     <span class="opacity-50 text-xs">Choose Rarity</span>
                 </button>
-                <button onclick="showItemPicker()" class="w-full p-3 bg-slate-800 hover:bg-slate-700 rounded-lg text-left flex justify-between transition">
-                    <span>Sell by Shape</span>
-                    <span class="opacity-50 text-xs">Choose Item</span>
-                </button>
             </div>
             <button onclick="closeBulkSell()" class="mt-6 w-full py-2 text-slate-400 hover:text-white text-sm">Cancel</button>
         </div>
@@ -213,14 +239,13 @@
 
     <script>
         // --- GAME STATE ---
-        let balance = 1000;
+        let balance = 200000;
         let day = 1;
         let secondsRemaining = 600;
         let inventory = [];
         const INV_MAX = 100;
 
-        // TRACKING FOR V1.1 DEMAND OVERHAUL
-        let lastDayCollectionCount = {}; // Tracks how many of each item you had when the day flipped
+        let lastDayCollectionCount = {}; 
 
         const demandTiers = [
             { id: 0, label: "Extremely Low", mult: 0.25, weight: 5 },
@@ -259,58 +284,48 @@
                 { id: 'square', name: "Hollow Square", shape: "shape-square", basePrice: 6000, weight: 60 },
                 { id: 'square_full', name: "Full Square", shape: "shape-square-full", basePrice: 12000, weight: 30 },
                 { id: 'big_square_full', name: "Big Full Square", shape: "shape-big-square-full", basePrice: 25000, weight: 10 }
+            ],
+            crazy: [
+                { id: 'pentagon_hollow', name: "Hollow Pentagon", shape: "shape-pentagon-hollow", basePrice: 100000, weight: 60 },
+                { id: 'pentagon_full', name: "Full Pentagon", shape: "shape-pentagon-full", basePrice: 250000, weight: 30 },
+                { id: 'big_pentagon_full', name: "Big Full Pentagon", shape: "shape-big-pentagon-full", basePrice: 500000, weight: 10}
             ]
         };
 
         const crateConfigs = {
-            common_crate: { cost: 0, weights: { common: 75, uncommon: 20, rare: 4.5, epic: 0.45, legendary: 0.05 } },
-            uncommon_crate: { cost: 100, weights: { common: 20, uncommon: 60, rare: 15, epic: 4, legendary: 1 } },
-            rare_crate: { cost: 500, weights: { common: 5, uncommon: 15, rare: 65, epic: 10, legendary: 5 } },
-            epic_crate: { cost: 2000, weights: { common: 1, uncommon: 3, rare: 11, epic: 70, legendary: 15 } },
-            legendary_crate: { cost: 10000, weights: { common: 0.5, uncommon: 1, rare: 3.5, epic: 15, legendary: 80 } }
+            common_crate: { cost: 0, weights: { common: 75, uncommon: 20, rare: 4.5, epic: 0.45, legendary: 0.04, crazy: 0.01 } },
+            uncommon_crate: { cost: 100, weights: { common: 20, uncommon: 60, rare: 15, epic: 4, legendary: 0.9, crazy: 0.1 } },
+            rare_crate: { cost: 500, weights: { common: 5, uncommon: 15, rare: 65, epic: 10, legendary: 4.5, crazy: 0.5 } },
+            epic_crate: { cost: 2000, weights: { common: 1, uncommon: 3, rare: 11, epic: 70, legendary: 14, crazy: 1 } },
+            legendary_crate: { cost: 10000, weights: { common: 0.5, uncommon: 1, rare: 3.5, epic: 15, legendary: 78, crazy: 2 } },
+            crazy_crate: { cost: 200000, weights: { common: 0.1, uncommon: 0.4, rare: 1.5, epic: 8, legendary: 30, crazy: 60 } }
         };
 
         let itemMarket = {};
 
-        // --- CORE LOGIC ---
-
         function randomizeMarket() {
-            // V1.1 Logic: Calculate the weight adjustments based on previous day collection
             Object.values(itemsConfig).flat().forEach(item => {
                 const count = lastDayCollectionCount[item.id] || 0;
-                
-                // Base luck factors
                 let marketWeights = demandTiers.map(t => ({...t}));
 
                 if (count > 0) {
-                    // SATURATION SYSTEM:
-                    // If you have many (e.g. 5+), the weights shift towards LOWER demand.
-                    // If you have few (e.g. 1), the weights shift towards HIGHER demand.
-                    
                     marketWeights = marketWeights.map(tier => {
                         let adjustment = 1.0;
-                        
                         if (count === 1) {
-                            // Rare item bonus: Double the chance for high demand
                             if (tier.id >= 5) adjustment = 2.0;
                             if (tier.id <= 2) adjustment = 0.5;
                         } else if (count >= 5) {
-                            // Flooded market penalty: Double the chance for low demand
                             if (tier.id <= 3) adjustment = 2.0;
                             if (tier.id >= 6) adjustment = 0.3;
                         } else if (count >= 2) {
-                            // Moderate: Slight push towards mid-low
                             if (tier.id <= 4) adjustment = 1.3;
                         }
-
                         return { ...tier, adjustedWeight: tier.weight * adjustment };
                     });
                 } else {
-                    // If you have none, it's just standard weights
                     marketWeights = marketWeights.map(t => ({...t, adjustedWeight: t.weight}));
                 }
 
-                // Roll based on adjusted weights
                 const totalWeight = marketWeights.reduce((a, b) => a + b.adjustedWeight, 0);
                 let random = Math.random() * totalWeight;
                 for (const tier of marketWeights) {
@@ -325,7 +340,6 @@
         }
 
         function nextDay() {
-            // Update lastDayCollectionCount before moving to next day
             const counts = {};
             inventory.forEach(item => {
                 counts[item.id] = (counts[item.id] || 0) + 1;
@@ -336,20 +350,21 @@
             secondsRemaining = 600;
             randomizeMarket();
 
-            // Age the items in the inventory
             inventory.forEach(item => {
                 item.ageDays = (item.ageDays || 0) + 1;
             });
 
             updateUI();
-            logHistory(`Day ${day}: Market updated based on your inventory!`, 'info');
+            logHistory(`Day ${day}: Market updated!`, 'info');
         }
 
         function calculateSellPrice(invItem) {
-            const market = itemMarket[invItem.id] || demandTiers[4]; // Default to OK
+            const market = itemMarket[invItem.id] || demandTiers[4];
             const age = invItem.ageDays || 0;
             const wearCycles = Math.floor(age / 5);
-            const itemWearMult = Math.pow(0.95, wearCycles);
+            // Cumulative 5% decrease: 1.0, 0.95, 0.90, 0.85...
+            const wearPenalty = wearCycles * 0.05;
+            const itemWearMult = Math.max(0.1, 1 - wearPenalty);
 
             return Math.floor(invItem.basePrice * market.mult * itemWearMult);
         }
@@ -361,7 +376,7 @@
                 return;
             }
             if (inventory.length >= INV_MAX) {
-                showToast("Inventory Full (100/100)!");
+                showToast("Inventory Full!");
                 return;
             }
 
@@ -374,7 +389,6 @@
             
             const freshPrice = Math.floor(itemBase.basePrice * demand.mult);
 
-            // Modal Setup
             const modal = document.getElementById('result-screen');
             const container = document.getElementById('result-container');
             const rarityClasses = { 
@@ -382,7 +396,8 @@
                 uncommon: 'rarity-uncommon bg-uncommon', 
                 rare: 'rarity-rare bg-rare', 
                 epic: 'rarity-epic bg-epic', 
-                legendary: 'rarity-legendary bg-legendary' 
+                legendary: 'rarity-legendary bg-legendary',
+                crazy: 'rarity-crazy bg-crazy'
             };
             
             container.className = `relative w-full max-w-md border-2 rounded-3xl overflow-hidden animate-pop shadow-2xl ${rarityClasses[rarity]}`;
@@ -410,18 +425,15 @@
             };
         }
 
-        // --- INVENTORY & UI ---
-
         function renderInventory() {
             const list = document.getElementById('inventory-list');
             document.getElementById('inv-count').innerText = inventory.length;
             
             if (inventory.length === 0) {
-                list.innerHTML = '<div class="col-span-full py-10 text-center text-slate-600 text-sm">Inventory is empty. Get some crates!</div>';
+                list.innerHTML = '<div class="col-span-full py-10 text-center text-slate-600 text-sm">Inventory is empty.</div>';
                 return;
             }
 
-            // Get counts of items currently in inventory to show "Saturation" hint
             const currentCounts = {};
             inventory.forEach(item => currentCounts[item.id] = (currentCounts[item.id] || 0) + 1);
 
@@ -431,17 +443,16 @@
                 const demandColor = market.mult > 1 ? 'text-green-400' : (market.mult < 1 ? 'text-red-400' : 'text-slate-400');
                 const age = item.ageDays || 0;
                 const wearCycles = Math.floor(age / 5);
-                const isWorn = wearCycles > 0;
+                const wearPercent = wearCycles * 5;
                 
                 const count = currentCounts[item.id];
                 let saturationText = "";
-                else if (count >= 10) saturationText = "ULTRA FLOODED";
-                else if (count >= 5) saturationText = "FLOODED";
+                if (count >= 5) saturationText = "FLOODED";
                 else if (count === 1) saturationText = "UNIQUE";
 
                 return `
                     <div class="bg-slate-800 border border-slate-700 rounded-lg p-3 text-center flex flex-col items-center justify-between group relative cursor-pointer hover:border-blue-500 transition min-h-[165px]" onclick="sellItem(${index})">
-                        <div class="scale-90 mb-2 flex items-center justify-center h-12 w-full ${item.rarity}-text">
+                        <div class="scale-90 mb-2 flex items-center justify-center h-12 w-full rarity-${item.rarity}">
                             <div class="${item.shape}"></div>
                         </div>
                         <div class="w-full">
@@ -451,7 +462,7 @@
                             <div class="mt-2 flex flex-col items-center gap-0.5 border-t border-slate-700 pt-1">
                                 <span class="text-[7px] opacity-40 uppercase">Age: ${age}d</span>
                                 ${saturationText ? `<span class="text-[7px] font-black tracking-tighter ${count === 1 ? 'text-blue-400' : 'text-amber-600'}">${saturationText}</span>` : ''}
-                                ${isWorn ? `<span class="text-[7px] text-orange-500 font-black">-${wearCycles * 5}% WORN</span>` : ''}
+                                ${wearPercent > 0 ? `<span class="text-[7px] text-orange-500 font-black">-${wearPercent}% WORN</span>` : ''}
                             </div>
                         </div>
                         <div class="absolute inset-0 bg-red-600/90 opacity-0 group-hover:opacity-100 flex items-center justify-center rounded-lg transition duration-150">
@@ -475,7 +486,6 @@
         function bulkSell(type, filterValue) {
             let toSell = [];
             let remaining = [];
-
             if (type === 'all') {
                 toSell = [...inventory];
                 inventory = [];
@@ -485,42 +495,20 @@
                     else remaining.push(item);
                 });
                 inventory = remaining;
-            } else if (type === 'item') {
-                inventory.forEach(item => {
-                    if (item.id === filterValue) toSell.push(item);
-                    else remaining.push(item);
-                });
-                inventory = remaining;
             }
-
             let totalGain = 0;
             toSell.forEach(item => totalGain += calculateSellPrice(item));
-            
             balance += totalGain;
-            if (toSell.length > 0) {
-                showToast(`Sold ${toSell.length} items for $${totalGain.toLocaleString()}!`);
-            }
+            if (toSell.length > 0) showToast(`Sold ${toSell.length} items!`);
             closeBulkSell();
             updateUI();
             renderInventory();
         }
 
         function showRarityPicker() {
-            const rarities = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
-            const choice = prompt("Type rarity to sell: (common, uncommon, rare, epic, legendary)");
-            if (choice && rarities.includes(choice.toLowerCase())) {
-                bulkSell('rarity', choice.toLowerCase());
-            }
-        }
-
-        function showItemPicker() {
-            const allItems = Object.values(itemsConfig).flat();
-            const names = allItems.map(i => i.name).join(', ');
-            const choice = prompt(`Type name to sell: \n\nOptions: ${names}`);
-            const itemMatch = allItems.find(i => i.name.toLowerCase() === choice?.toLowerCase());
-            if (itemMatch) {
-                bulkSell('item', itemMatch.id);
-            }
+            const choice = prompt("Type rarity (common, uncommon, rare, epic, legendary, crazy):");
+            const valid = ['common', 'uncommon', 'rare', 'epic', 'legendary', 'crazy'];
+            if (choice && valid.includes(choice.toLowerCase())) bulkSell('rarity', choice.toLowerCase());
         }
 
         function toggleInventory() {
@@ -532,8 +520,6 @@
         function openBulkSell() { document.getElementById('bulk-sell-modal').classList.remove('hidden'); }
         function closeBulkSell() { document.getElementById('bulk-sell-modal').classList.add('hidden'); }
         function closeResult() { document.getElementById('result-screen').classList.add('hidden'); }
-
-        // --- HELPERS ---
 
         function updateUI() {
             document.getElementById('balance').innerText = `$${Math.floor(balance).toLocaleString()}`;
@@ -589,7 +575,6 @@
             setTimeout(() => t.remove(), 2500);
         }
 
-        // Init
         randomizeMarket();
         updateUI();
         startTimer();
