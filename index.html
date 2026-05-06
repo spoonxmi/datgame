@@ -33,6 +33,62 @@
             flex-direction: column;
             position: relative;
             overflow: hidden;
+            transition: background 0.5s ease;
+        }
+
+        /* SHAKE ANIMATION */
+        @keyframes shake {
+            0% { transform: translate(1px, 1px) rotate(0deg); }
+            10% { transform: translate(-1px, -2px) rotate(-1deg); }
+            20% { transform: translate(-3px, 0px) rotate(1deg); }
+            30% { transform: translate(3px, 2px) rotate(0deg); }
+            40% { transform: translate(1px, -1px) rotate(1deg); }
+            50% { transform: translate(-1px, 2px) rotate(-1deg); }
+            60% { transform: translate(-3px, 1px) rotate(0deg); }
+            70% { transform: translate(3px, 1px) rotate(-1deg); }
+            80% { transform: translate(-1px, -1px) rotate(1deg); }
+            90% { transform: translate(1px, 2px) rotate(0deg); }
+            100% { transform: translate(1px, -2px) rotate(-1deg); }
+        }
+        .shake { animation: shake 0.4s; }
+
+        /* BOSS EFFECTS */
+        @keyframes rain {
+            0% { transform: translateY(-20px) rotate(0deg); opacity: 0; }
+            20% { opacity: 1; }
+            80% { opacity: 1; }
+            100% { transform: translateY(500px) rotate(360deg); opacity: 0; }
+        }
+        .falling-asset {
+            position: absolute;
+            pointer-events: none;
+            z-index: 10;
+            font-size: 1.5rem;
+            animation: rain 3s linear infinite;
+        }
+
+        @keyframes rotate-alarm {
+            0% { background: conic-gradient(from 0deg, #ff000033, #00000000, #ff000033); }
+            100% { background: conic-gradient(from 360deg, #ff000033, #00000000, #ff000033); }
+        }
+        .alarm-glow {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            animation: rotate-alarm 4s linear infinite;
+            z-index: 0;
+            opacity: 0.6;
+        }
+
+        @keyframes hover-skull {
+            0%, 100% { transform: translateY(0) scale(1); filter: drop-shadow(0 0 5px red); }
+            50% { transform: translateY(-15px) scale(1.1); filter: drop-shadow(0 0 15px red); }
+        }
+        .skull-asset {
+            position: absolute;
+            font-size: 2.5rem;
+            z-index: 10;
+            animation: hover-skull 3s ease-in-out infinite;
         }
 
         .bar-container {
@@ -69,7 +125,7 @@
         .btn-menu:hover:not(:disabled) {
             background: #475569;
             transform: translateY(-2px);
-            border-color: #64748b;
+            border-color: #6366f1;
         }
 
         .action-btn {
@@ -150,6 +206,8 @@
             flex-grow: 1;
             overflow-y: scroll;
             height: 120px;
+            position: relative;
+            z-index: 5;
         }
 
         .log-entry { margin-bottom: 0.4rem; border-left: 2px solid #334155; padding-left: 0.75rem; }
@@ -232,7 +290,7 @@
 
         .content-scrollable { flex-grow: 1; overflow-y: auto; padding-right: 4px; }
 
-        /* RAINBOW EFFECTS */
+        /* EFFECTS */
         @keyframes rainbow {
             0% { color: #ff0000; }
             17% { color: #ff8800; }
@@ -243,21 +301,26 @@
             100% { color: #ff0000; }
         }
         @keyframes rainbow-bg {
-            0% { background-color: #ff0000; }
-            17% { background-color: #ff8800; }
-            33% { background-color: #ffff00; }
-            50% { background-color: #00ff00; }
-            67% { background-color: #0000ff; }
-            83% { background-color: #8800ff; }
-            100% { background-color: #ff0000; }
+            0% { background-color: #ff000022; }
+            17% { background-color: #ff880022; }
+            33% { background-color: #ffff0022; }
+            50% { background-color: #00ff0022; }
+            67% { background-color: #0000ff22; }
+            83% { background-color: #8800ff22; }
+            100% { background-color: #ff000022; }
         }
         .text-rainbow { animation: rainbow 3s linear infinite; }
-        .bg-rainbow { animation: rainbow-bg 3s linear infinite; }
+        .bg-rainbow-battle { animation: rainbow-bg 3s linear infinite !important; }
+        .text-gold { color: #fbbf24; text-shadow: 0 0 5px rgba(251, 191, 36, 0.5); }
+        .text-boss { color: #ef4444; text-transform: uppercase; font-weight: 900; letter-spacing: 0.1em; }
     </style>
 </head>
 <body>
 
-    <div class="game-container">
+    <div id="game-container" class="game-container">
+        <!-- Decoration Layers -->
+        <div id="alarm-layer" class="alarm-glow hidden"></div>
+        <div id="decoration-layer" class="absolute inset-0 pointer-events-none overflow-hidden"></div>
         <div id="fade-overlay" class="fade-overlay"></div>
 
         <div id="combat-modal" class="hidden absolute inset-0 z-50 flex items-center justify-center p-6 bg-slate-950/80 backdrop-blur-sm">
@@ -271,7 +334,7 @@
             </div>
         </div>
 
-        <div id="hud" class="mb-4">
+        <div id="hud" class="mb-4 relative z-10">
             <div class="flex justify-between items-center mb-4">
                 <h1 class="font-extrabold text-2xl tracking-tighter bg-gradient-to-br from-white to-slate-500 bg-clip-text text-transparent">VALOR ECHOES</h1>
                 <div class="flex flex-col items-end">
@@ -301,11 +364,11 @@
             <div id="player-statuses" class="flex flex-wrap gap-1 mb-2"></div>
         </div>
 
-        <div id="screen-main" class="flex-grow custom-scroll">
+        <div id="screen-main" class="flex-grow custom-scroll relative z-10">
             <div class="menu-buttons">
-                <button onclick="showScreen('enemies')" class="btn-menu group">
+                <button onclick="showScreen('bestiary')" class="btn-menu group">
                     <span class="text-red-400 group-hover:scale-110 transition-transform">⚔️</span>
-                    Enter Battle
+                    Bestiary
                 </button>
                 <button onclick="showScreen('shop')" class="btn-menu group">
                     <span class="text-amber-400 group-hover:scale-110 transition-transform">💰</span>
@@ -315,10 +378,14 @@
                     <span class="text-slate-300 group-hover:scale-110 transition-transform">🔨</span>
                     Forge (Repair Armor)
                 </button>
+                <button onclick="saveGame()" class="btn-menu group">
+                    <span class="text-green-400 group-hover:scale-110 transition-transform">💾</span>
+                    Save Game
+                </button>
             </div>
         </div>
 
-        <div id="screen-shop" class="hidden flex-grow flex flex-col overflow-hidden">
+        <div id="screen-shop" class="hidden flex-grow flex flex-col overflow-hidden relative z-10">
              <div class="flex items-center justify-between mb-4">
                 <h2 class="text-lg font-bold uppercase tracking-widest text-amber-400">Armory</h2>
                 <button onclick="showScreen('main')" class="text-xs bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded-full">← Back</button>
@@ -332,12 +399,24 @@
             </div>
         </div>
 
-        <div id="screen-enemies" class="hidden flex-grow flex flex-col overflow-hidden">
-            <div class="flex items-center justify-between mb-2">
+        <div id="screen-bestiary" class="hidden flex-grow flex flex-col overflow-hidden relative z-10">
+            <div class="flex items-center justify-between mb-4">
                 <h2 class="text-lg font-bold uppercase tracking-widest text-slate-400">Bestiary</h2>
+                <button onclick="showScreen('main')" class="text-xs bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded-full">← Back</button>
+            </div>
+            <div class="flex flex-col gap-3">
+                <button onclick="showScreen('enemies')" class="btn-menu text-red-400">🟢 Slimes</button>
+                <button disabled class="btn-menu text-slate-500 opacity-50 cursor-not-allowed">💀 Undead (Locked)</button>
+                <button disabled class="btn-menu text-slate-500 opacity-50 cursor-not-allowed">🐉 Beasts (Locked)</button>
+            </div>
+        </div>
+
+        <div id="screen-enemies" class="hidden flex-grow flex flex-col overflow-hidden relative z-10">
+            <div class="flex items-center justify-between mb-2">
+                <h2 class="text-lg font-bold uppercase tracking-widest text-green-400">Slimes</h2>
                 <div class="flex gap-2">
                     <button onclick="healPlayer()" class="text-[10px] bg-green-900/40 text-green-400 border border-green-800 px-3 py-1 rounded-full hover:bg-green-800/50 transition-colors">Heal</button>
-                    <button onclick="showScreen('main')" class="text-xs bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded-full">← Back</button>
+                    <button onclick="showScreen('bestiary')" class="text-xs bg-slate-700 hover:bg-slate-600 px-3 py-1 rounded-full">← Back</button>
                 </div>
             </div>
             
@@ -360,7 +439,7 @@
             <div id="enemy-list" class="flex-grow overflow-y-auto custom-scroll pr-2 pb-4"></div>
         </div>
 
-        <div id="screen-battle" class="hidden flex-grow flex flex-col">
+        <div id="screen-battle" class="hidden flex-grow flex flex-col relative z-10">
             <div id="battle-header" class="flex items-center justify-between mb-2">
                 <h2 class="text-lg font-bold uppercase tracking-widest text-red-500">Combat</h2>
                 <span id="target-instruction" class="text-[10px] text-amber-400 animate-pulse hidden">SELECT TARGET</span>
@@ -370,7 +449,7 @@
 
             <div id="battle-log" class="custom-scroll mb-4"></div>
 
-            <div id="battle-sub-menu" class="hidden bg-slate-800 border border-slate-600 rounded-lg p-3 mb-3 flex flex-col">
+            <div id="battle-sub-menu" class="hidden bg-slate-800 border border-slate-600 rounded-lg p-3 mb-3 flex flex-col relative z-20">
                 <div class="flex justify-between items-center mb-2">
                     <span id="sub-menu-title" class="label-text text-indigo-400">Actions</span>
                     <button onclick="closeSubMenu()" class="text-[10px] text-slate-500 hover:text-white">CLOSE [X]</button>
@@ -386,7 +465,7 @@
             </div>
         </div>
 
-        <div id="screen-death" class="hidden absolute inset-0 flex flex-col items-center justify-center p-8 text-center">
+        <div id="screen-death" class="hidden absolute inset-0 flex flex-col items-center justify-center p-8 text-center z-[200]">
             <h1 class="font-['Cinzel'] text-5xl text-red-600 mb-2 drop-shadow-[0_0_15px_rgba(220,38,38,0.8)]">YOU DIED</h1>
             <p id="death-reason" class="text-slate-400 text-sm mb-8">Slain</p>
             <div class="w-full bg-slate-900/50 border border-red-900/30 rounded-lg p-4 mb-8 text-left">
@@ -405,7 +484,7 @@
             xp: 0, nextLevelXp: 500,
             level: 1, gold: 50,
             isPlayerTurn: true,
-            enemies: [], // Array of objects: { name, hp, maxHp, armor, maxArmor, id }
+            enemies: [],
             activeMove: null,
             isSelectingTarget: false,
             cooldowns: {},
@@ -487,6 +566,14 @@
                     {name: 'Heavy Impact', dmg: [50, 75], acc: 0.55}
                 ] 
             },
+            'RGB Slime': { hp: 350, armor: 80, xp: 400, gold: 350, tier: 3, color: 'text-cyan-400',
+                attacks: [
+                    {name: 'Thermal Shock', dmg: [20, 30], acc: 0.9, effect: 'burn', duration: 2},
+                    {name: 'Nature Wrath', dmg: [15, 25], acc: 0.9, effect: 'poison', duration: 4},
+                    {name: 'Hydro Pump', dmg: [25, 35], acc: 0.85, effect: 'wet', duration: 2},
+                    {name: 'Tri-Attack', dmg: [40, 50], acc: 0.8}
+                ]
+            },
             'Rainbow Slime': { 
                 hp: 1200, armor: 300, xp: 5000, gold: 3000, tier: 4, color: 'text-rainbow', 
                 attacks: [
@@ -495,38 +582,54 @@
                     {name: 'Rainbow Pulse', dmg: [30, 45], acc: 0.9, effect: 'jammed', duration: 3},
                     {name: 'Chroma Spike', dmg: [50, 80], acc: 0.8, jam: 5, jamCount: 5}
                 ] 
+            },
+            'King Slime': { hp: 2500, armor: 1000, xp: 8000, gold: 5000, tier: 4, color: 'text-gold',
+                attacks: [
+                    {name: 'Royal Squeeze', dmg: [40, 60], acc: 0.9},
+                    {name: 'Crown Crash', dmg: [70, 90], acc: 0.7, jam: 3, jamCount: 1},
+                    {name: 'Sovereign Slam', dmg: [50, 70], acc: 0.85},
+                    {name: 'Gold Rain', dmg: [30, 100], acc: 0.75},
+                    {name: 'Kingdom Gulp', dmg: [60, 80], acc: 0.8},
+                    {name: 'Royal Decree', dmg: [1, 5], acc: 0.99, jam: 4, jamCount: 4},
+                    {name: 'Heavy Throne', dmg: [80, 110], acc: 0.6},
+                    {name: 'Gilded Gash', dmg: [45, 65], acc: 0.9},
+                    {name: 'Majesty', dmg: [20, 40], acc: 0.9, effect: 'shock', duration: 3},
+                    {name: 'The Final Word', dmg: [100, 150], acc: 0.5}
+                ]
+            },
+            'MEGA SLIME': { hp: 6000, armor: 3000, xp: 25000, gold: 15000, tier: 5, color: 'text-boss',
+                attacks: [
+                    /* Phase 1 - 7 Attacks */
+                    {name: 'Mega Crush', dmg: [80, 120], acc: 0.85},
+                    {name: 'World Shaker', dmg: [60, 90], acc: 0.9, jam: 2, jamCount: 2},
+                    {name: 'Ooze Wave', dmg: [50, 70], acc: 0.9, effect: 'wet', duration: 5},
+                    {name: 'Titanic Slam', dmg: [100, 150], acc: 0.7},
+                    {name: 'Giga Gulp', dmg: [70, 100], acc: 0.8},
+                    {name: 'Slime Apocalypse', dmg: [40, 180], acc: 0.6},
+                    {name: 'Ancient Grudge', dmg: [90, 110], acc: 0.85},
+                    /* Phase 2 - 8 Attacks (Stronger) */
+                    {name: 'ABSOLUTE ZERO', dmg: [150, 200], acc: 0.9, effect: 'jammed', duration: 5},
+                    {name: 'SUN KILLER', dmg: [180, 250], acc: 0.8, effect: 'burn', duration: 8},
+                    {name: 'PLANET BREAKER', dmg: [200, 300], acc: 0.7},
+                    {name: 'VOID EATER', dmg: [100, 150], acc: 0.95, jam: 10, jamCount: 10},
+                    {name: 'EXTINCTION', dmg: [300, 500], acc: 0.4, crit: 0.5},
+                    {name: 'GOD SLAYER', dmg: [200, 250], acc: 0.85},
+                    {name: 'END OF DAYS', dmg: [250, 350], acc: 0.75},
+                    {name: 'TRUE FORM', dmg: [100, 100], acc: 1.0, effect: 'venom', duration: 10}
+                ]
             }
         };
-
-        // All possible enemy attacks for the Rainbow Slime to use randomly
-        const ALL_SLIME_ATTACKS = Object.values(ENEMY_DATA).flatMap(d => d.attacks);
 
         const DEATH_TIPS = [
             "Void damage can jam your moves. Keep high-accuracy attacks ready.",
             "Gray Slimes are Concrete-hard. You'll need high-damage Smashes or Piercing attacks.",
+            "The MEGA SLIME enters Phase 2 below 50% Health. Be prepared!",
+            "King Slime's armor is nearly impenetrable. Focus on sustained damage.",
             "Repair your armor frequently at the Forge. It's your only buffer.",
-            "Wooden Sword unlocks Slash and Pierce for better damage variety.",
-            "The COMBO special is only available with both Sword and Shield equipped.",
-            "Challenge modes share rewards from ALL defeated slimes. Huge gold opportunity!",
-            "Shocked? Your turn might be delayed. Stay healthy!",
-            "Rainbow Slime can mimic any attack. Expect the unexpected.",
-            "Armor is reduced BEFORE health. Keep it topped up.",
-            "Unarmed Smash has high crit but low accuracy. Risk vs Reward!",
-            "Poison ticks every turn. Don't let it stack up.",
-            "Jammed moves cannot be used. Wait it out or use an unjammed skill.",
-            "Fleeing costs gold, but saves your life.",
-            "The Traveling Merchant updates when you return from battle.",
-            "Empowered status (from skipping) lasts for TWO hits. Make them count!",
-            "Shield Bash is excellent for chipping away enemy armor.",
-            "Vertical Slash is your best source of mid-tier burst damage.",
-            "John Cena move is extremely powerful but has a massive cooldown.",
-            "In multi-target fights, focus on the weakest enemy first to reduce total damage.",
-            "Venom is stronger than Poison. It deals increasing damage over time.",
-            "Rainbow Slime health bars are animated because they are cool.",
-            "The Ultimate Challenge is for Level 10+ players only. Good luck.",
-            "Wet status increases damage taken from Shock attacks (Planned feature).",
-            "Burn deals high consistent damage. Watch your health bar!",
-            "Always check the Bestiary before a fight to see enemy Tiers."
+            "The Ultimate Challenge rewards are astronomical but deadly.",
+            "RGB Slime combines Red, Green, and Blue status effects. Watch your debuffs!",
+            "Saving frequently is the mark of a true hero.",
+            "Mega Slime Phase 2 attacks are significantly more lethal."
         ];
 
         const GEAR_SLOTS = [
@@ -567,17 +670,89 @@
             { name: 'COMBO', dmg: [0, 0], acc: 1.0, crit: 0, cd: 20, type: 'Special', req: 'combo' }
         ];
 
+        // BOSS EFFECT MANAGEMENT
+        let bossEffectInterval = null;
+        function clearBossEffects() {
+            if (bossEffectInterval) clearInterval(bossEffectInterval);
+            const container = document.getElementById('game-container');
+            const decos = document.getElementById('decoration-layer');
+            const alarm = document.getElementById('alarm-layer');
+            container.classList.remove('bg-rainbow-battle');
+            alarm.classList.add('hidden');
+            decos.innerHTML = '';
+        }
+
+        function startBossEffects() {
+            clearBossEffects();
+            const hasRainbow = gameState.enemies.some(e => e.name === 'Rainbow Slime');
+            const hasKing = gameState.enemies.some(e => e.name === 'King Slime');
+            const hasMega = gameState.enemies.some(e => e.name === 'MEGA SLIME');
+
+            const container = document.getElementById('game-container');
+            const decos = document.getElementById('decoration-layer');
+            const alarm = document.getElementById('alarm-layer');
+
+            if (hasRainbow) container.classList.add('bg-rainbow-battle');
+            
+            if (hasMega) {
+                alarm.classList.remove('hidden');
+                // Static Skulls
+                decos.innerHTML += `<div class="skull-asset" style="top: 10%; left: 5%;">💀</div>`;
+                decos.innerHTML += `<div class="skull-asset" style="top: 10%; right: 5%;">💀</div>`;
+            }
+
+            if (hasKing || hasRainbow) {
+                bossEffectInterval = setInterval(() => {
+                    const el = document.createElement('div');
+                    el.className = 'falling-asset';
+                    el.style.left = Math.random() * 90 + '%';
+                    
+                    if (hasKing) {
+                        const items = ['👑', '💎', '💰', '✨'];
+                        el.innerText = items[Math.floor(Math.random() * items.length)];
+                    } else if (hasRainbow) {
+                        el.innerText = '🌈';
+                        el.style.filter = 'hue-rotate(' + (Math.random() * 360) + 'deg)';
+                    }
+                    
+                    decos.appendChild(el);
+                    setTimeout(() => el.remove(), 3000);
+                }, 400);
+            }
+        }
+
+        // SAVE SYSTEM
+        function saveGame() {
+            localStorage.setItem('valor_echoes_save', JSON.stringify(gameState));
+            addLogSystem('Game progress saved locally.');
+        }
+
+        function loadGame() {
+            const saved = localStorage.getItem('valor_echoes_save');
+            if (saved) {
+                const parsed = JSON.parse(saved);
+                Object.assign(gameState, parsed);
+                updateHUD();
+                addLogSystem('Game progress loaded.');
+            }
+        }
+
         function updateHUD() {
             document.getElementById('hp-val').innerText = `${Math.ceil(gameState.hp)}/${gameState.maxHp}`;
             document.getElementById('hp-bar').style.width = (Math.max(0, gameState.hp) / gameState.maxHp * 100) + '%';
+            
             let tma = 0; Object.values(gameState.equipped).forEach(i => tma += (i.armor || 0));
             gameState.maxArmor = tma;
+            
             document.getElementById('arm-val').innerText = `${gameState.armor}/${gameState.maxArmor}`;
             document.getElementById('arm-bar').style.width = gameState.maxArmor > 0 ? (gameState.armor / gameState.maxArmor * 100) + '%' : '0%';
+            
             document.getElementById('xp-val').innerText = `${gameState.xp}/${gameState.nextLevelXp}`;
             document.getElementById('xp-bar').style.width = (gameState.xp / gameState.nextLevelXp * 100) + '%';
+            
             document.getElementById('gold-val').innerText = gameState.gold;
             document.getElementById('lvl-label').innerText = `LVL ${gameState.level}`;
+            
             const repairCost = Math.ceil((gameState.maxArmor - gameState.armor) * 1.5);
             document.getElementById('btn-forge-main').innerText = `🔨 Forge (Repair ${repairCost}G)`;
             document.getElementById('btn-forge-main').disabled = gameState.armor >= gameState.maxArmor || gameState.gold < repairCost;
@@ -597,8 +772,9 @@
         }
 
         function showScreen(screenId) {
-            ['main', 'enemies', 'battle', 'shop', 'death'].forEach(s => document.getElementById('screen-' + s)?.classList.add('hidden'));
+            ['main', 'bestiary', 'enemies', 'battle', 'shop', 'death'].forEach(s => document.getElementById('screen-' + s)?.classList.add('hidden'));
             document.getElementById('screen-' + screenId)?.classList.remove('hidden');
+            if(screenId !== 'battle') clearBossEffects();
             if(screenId === 'enemies') buildEnemyList();
             if(screenId === 'shop') renderShop();
             updateHUD();
@@ -613,9 +789,12 @@
                 card.className = 'enemy-card';
                 card.onclick = () => confirmFight(name);
                 card.innerHTML = `
-                    <div class="flex justify-between mb-2"><span class="font-bold ${data.color}">${name}</span><span class="text-xs text-slate-500">Tier ${data.tier}</span></div>
+                    <div class="flex justify-between mb-2">
+                        <span class="font-bold ${data.color}">${name}</span>
+                        <span class="text-xs text-slate-500">${data.tier === 5 ? 'BOSS' : 'Tier ' + data.tier}</span>
+                    </div>
                     <div class="flex justify-between items-end"><span class="label-text">Health</span><span class="value-text text-red-400">${data.hp} HP</span></div>
-                    <div class="bar-container h-1"><div class="bar-fill ${name === 'Rainbow Slime' ? 'bg-rainbow' : 'bg-red-600'}" style="width: 100%"></div></div>
+                    <div class="bar-container h-1"><div class="bar-fill ${name === 'Rainbow Slime' ? 'bg-rainbow' : (data.tier >= 4 ? 'bg-amber-500' : 'bg-red-600')}" style="width: 100%"></div></div>
                 `;
                 container.appendChild(card);
             });
@@ -627,14 +806,11 @@
             const names = Object.keys(ENEMY_DATA);
             const baseData = ENEMY_DATA[name];
             
-            // Add primary enemy
             gameState.enemies.push(createEnemyInstance(name));
 
-            // Add challenge companions
-            if (count > 1) {
+            if (count > 1 && baseData.tier < 5) {
                 for (let i = 1; i < count; i++) {
-                    // Filter names that are within +-1 tier of selected
-                    const pool = names.filter(n => Math.abs(ENEMY_DATA[n].tier - baseData.tier) <= 1);
+                    const pool = names.filter(n => Math.abs(ENEMY_DATA[n].tier - baseData.tier) <= 1 && ENEMY_DATA[n].tier < 5);
                     const randomName = pool[Math.floor(Math.random() * pool.length)];
                     gameState.enemies.push(createEnemyInstance(randomName));
                 }
@@ -650,7 +826,7 @@
             return {
                 id: Math.random().toString(36).substr(2, 9),
                 name: name, hp: d.hp, maxHp: d.hp, armor: d.armor, maxArmor: d.armor,
-                color: d.color, attacks: d.attacks, tier: d.tier
+                color: d.color, attacks: d.attacks, tier: d.tier, phase: 1
             };
         }
 
@@ -666,6 +842,7 @@
                 gameState.activeMove = null;
                 clearStatuses();
                 updateBattleUI();
+                startBossEffects();
                 addLog(`Battle started! Fight!`, 'log-system');
                 fade.classList.remove('fade-active');
             }, 800);
@@ -679,8 +856,13 @@
                 card.className = `enemy-card p-2 text-[10px] ${gameState.isSelectingTarget ? 'targeted animate-pulse' : ''}`;
                 card.onclick = () => { if (gameState.isSelectingTarget) executeTurn(e.id); };
                 card.innerHTML = `
-                    <div class="flex justify-between font-bold ${e.color}"><span>${e.name}</span><span>${Math.max(0, Math.ceil(e.hp))}/${e.maxHp}</span></div>
-                    <div class="bar-container h-[6px] mt-1"><div class="bar-fill ${e.name === 'Rainbow Slime' ? 'bg-rainbow' : 'bg-red-600'}" style="width: ${(e.hp/e.maxHp)*100}%"></div></div>
+                    <div class="flex justify-between font-bold ${e.color}">
+                        <span>${e.name} ${e.tier === 5 ? '(PHASE ' + e.phase + ')' : ''}</span>
+                        <span>${Math.max(0, Math.ceil(e.hp))}/${e.maxHp}</span>
+                    </div>
+                    <div class="bar-container h-[6px] mt-1">
+                        <div class="bar-fill ${e.name === 'Rainbow Slime' ? 'bg-rainbow' : (e.tier >= 4 ? 'bg-amber-500' : 'bg-red-600')}" style="width: ${(e.hp/e.maxHp)*100}%"></div>
+                    </div>
                     ${e.maxArmor > 0 ? `<div class="bar-container h-[3px] mt-1"><div class="bar-fill bg-slate-400" style="width: ${(e.armor/e.maxArmor)*100}%"></div></div>` : ''}
                 `;
                 container.appendChild(card);
@@ -723,11 +905,10 @@
                 runAttack(move, target);
             }
 
-            // Cleanup dead enemies
             const rewardPool = gameState.enemies.filter(e => e.hp <= 0);
             rewardPool.forEach(e => {
-                gameState.gold += e.tier * 15;
-                gameState.xp += e.tier * 25;
+                gameState.gold += e.tier * 25;
+                gameState.xp += e.tier * 40;
             });
             gameState.enemies = gameState.enemies.filter(e => e.hp > 0);
 
@@ -747,7 +928,6 @@
                 if (crit) dmg = Math.floor(dmg * 1.5);
                 if (gameState.statuses.empowered > 0) { dmg = Math.floor(dmg * 1.4); gameState.statuses.empowered--; }
                 
-                // Gear bonus
                 dmg += (gameState.equipped.ring?.dmg || 0) + (gameState.equipped.amulet?.dmg || 0);
 
                 applyDmg(target, dmg);
@@ -787,14 +967,32 @@
                 if (gameState.hp <= 0) break;
                 await new Promise(r => setTimeout(r, 500));
                 
-                // Rainbow slime logic: pull from all attacks
-                const pool = e.name === 'Rainbow Slime' ? ALL_SLIME_ATTACKS : e.attacks;
+                let pool = e.attacks;
+                
+                if (e.name === 'RGB Slime') {
+                    const extra = [...ENEMY_DATA['Red Slime'].attacks, ...ENEMY_DATA['Blue Slime'].attacks, ...ENEMY_DATA['Green Slime'].attacks];
+                    pool = [...pool, ...extra];
+                }
+
+                if (e.name === 'MEGA SLIME') {
+                    if (e.hp < e.maxHp / 2 && e.phase === 1) {
+                        e.phase = 2;
+                        addLogSystem('MEGA SLIME IS ENRAGED! PHASE 2 START!');
+                    }
+                    pool = e.phase === 1 ? e.attacks.slice(0, 7) : e.attacks.slice(7, 15);
+                }
+
                 const atk = pool[Math.floor(Math.random() * pool.length)];
                 
                 if (Math.random() > (atk.acc || 0.85)) {
                     addLog(`${e.name}'s ${atk.name} <span class="log-miss">missed</span>!`, 'log-enemy');
                 } else {
                     let dmg = Math.floor(Math.random() * (atk.dmg[1] - atk.dmg[0] + 1)) + atk.dmg[0];
+                    
+                    const container = document.getElementById('game-container');
+                    container.classList.add('shake');
+                    setTimeout(() => container.classList.remove('shake'), 400);
+
                     if (gameState.armor > 0) {
                         const abs = Math.min(gameState.armor, dmg);
                         gameState.armor -= abs;
@@ -802,6 +1000,7 @@
                     }
                     gameState.hp -= dmg;
                     addLog(`<span class="${e.color}">${e.name}</span> used ${atk.name} for ${dmg} dmg!`, 'log-enemy');
+                    
                     if (atk.effect) gameState.statuses[atk.effect] = Math.max(gameState.statuses[atk.effect], atk.duration);
                     if (atk.jam) {
                         gameState.statuses.jammed = Math.max(gameState.statuses.jammed, atk.jam);
@@ -825,7 +1024,6 @@
             setTimeout(enemyTurn, 800);
         }
 
-        // Standard helpers
         function getActiveAttacks() {
             const hasShield = !!gameState.equipped['shield'];
             const hasSword = !!gameState.equipped['weapon'];
@@ -838,13 +1036,16 @@
                 return false;
             });
         }
+
+        function addLogSystem(t) { addLog(t, 'log-system'); }
         function closeSubMenu() { document.getElementById('battle-sub-menu').classList.add('hidden'); }
         function closeModal() { document.getElementById('combat-modal').classList.add('hidden'); }
         function setControlsEnabled(e) { ['btn-attack','btn-special','btn-skip','btn-flee'].forEach(id => document.getElementById(id).disabled = !e); }
         function addLog(t, c) { const l = document.getElementById('battle-log'); const d = document.createElement('div'); d.className = `log-entry ${c}`; d.innerHTML = t; l.appendChild(d); l.scrollTop = l.scrollHeight; }
         function clearStatuses() { gameState.statuses = { burn: 0, poison: 0, shock: 0, wet: 0, jammed: 0, jammedMoves: [], empowered: 0, venom: 0 }; }
         function healPlayer() { const cost = Math.ceil((gameState.maxHp - gameState.hp) * 0.5); if (gameState.gold >= cost) { gameState.gold -= cost; gameState.hp = gameState.maxHp; clearStatuses(); updateHUD(); } }
-        function fleeBattle() { if (gameState.gold >= 15) { gameState.gold -= 15; showScreen('enemies'); } }
+        function fleeBattle() { if (gameState.gold >= 15) { gameState.gold -= 15; showScreen('bestiary'); } }
+        
         function processPlayerEffects() {
             const s = gameState.statuses;
             if (s.burn > 0) { gameState.hp -= 5; addLog(`Burn: 5 dmg`, 'log-status'); s.burn--; }
@@ -853,10 +1054,13 @@
             if (s.shock > 0) s.shock--; if (s.wet > 0) s.wet--;
             if (s.jammed > 0) { s.jammed--; if(s.jammed === 0) { s.jammedMoves = []; addLog('Jammed moves cleared!', 'log-system'); } }
         }
-        function winBattle() { addLog(`Victory! Rewards collected.`, 'log-reward'); if (gameState.xp >= gameState.nextLevelXp) levelUp(); updateHUD(); setTimeout(() => showScreen('enemies'), 1500); }
+
+        function winBattle() { addLog(`Victory! Rewards collected.`, 'log-reward'); if (gameState.xp >= gameState.nextLevelXp) levelUp(); updateHUD(); setTimeout(() => showScreen('bestiary'), 1500); }
         function levelUp() { gameState.level++; gameState.xp -= gameState.nextLevelXp; gameState.nextLevelXp = Math.floor(gameState.nextLevelXp * 1.5); gameState.maxHp += 20; gameState.hp = gameState.maxHp; addLog(`LVL UP!`, 'log-crit'); }
         function triggerDeath() { showScreen('death'); document.getElementById('death-tip').innerText = `"${DEATH_TIPS[Math.floor(Math.random() * DEATH_TIPS.length)]}"`; gameState.hp = 10; gameState.gold = Math.floor(gameState.gold * 0.5); }
+        
         function repairArmor() { const cost = Math.ceil((gameState.maxArmor - gameState.armor) * 1.5); if (gameState.gold >= cost && gameState.armor < gameState.maxArmor) { gameState.gold -= cost; gameState.armor = gameState.maxArmor; updateHUD(); } }
+        
         function renderShop() {
             const gearGrid = document.getElementById('gear-container'); gearGrid.innerHTML = '';
             GEAR_SLOTS.forEach(slot => {
@@ -875,6 +1079,7 @@
                 shopList.appendChild(div);
             });
         }
+
         function buyItem(id) { const item = SHOP_ITEMS.find(i => i.id === id); if (gameState.gold >= item.price) { gameState.gold -= item.price; gameState.inventory.push({...item}); renderShop(); updateHUD(); } }
         function equipItem(id) {
             const idx = gameState.inventory.findIndex(i => i.id === id); if (idx === -1) return;
@@ -885,6 +1090,8 @@
             renderShop(); updateHUD();
         }
 
+        // Initialize
+        loadGame();
         updateHUD();
     </script>
 </body>
