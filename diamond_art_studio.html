@@ -1,0 +1,2044 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Diamond Art Studio</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons CDN -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght=300;400;500;600;700;800&display=swap');
+        
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #0b0f19;
+            color: #f3f4f6;
+            overflow-x: hidden;
+            /* Prevents iOS bounce scroll */
+            position: fixed;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* Custom Scrollbars */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #111827;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #374151;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #4b5563;
+        }
+
+        /* Prevent system pull-to-refresh on mobile */
+        html, body {
+            overscroll-behavior-y: contain;
+        }
+
+        /* Smooth transitions for mobile drawers */
+        .drawer-transition {
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        /* Touch target improvements */
+        .touch-button {
+            min-height: 44px;
+            min-width: 44px;
+        }
+
+        /* Glassmorphism utility */
+        .glass-panel {
+            background: rgba(17, 24, 39, 0.8);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+        }
+
+        /* Custom styling to disable default touch behaviors on canvas viewport */
+        #canvasViewport {
+            touch-action: none;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col overflow-hidden">
+
+    <!-- Header -->
+    <header class="glass-panel border-b border-gray-800 px-4 py-3 sm:px-6 sm:py-4 flex items-center justify-between z-10 shrink-0">
+        <div class="flex items-center gap-2 sm:gap-3">
+            <div class="bg-gradient-to-tr from-violet-600 to-fuchsia-500 p-2 rounded-xl shadow-lg shadow-fuchsia-500/20">
+                <svg class="w-5 h-5 sm:w-6 sm:h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"></path>
+                </svg>
+            </div>
+            <div>
+                <h1 class="text-base sm:text-xl font-bold bg-gradient-to-r from-white via-gray-100 to-gray-300 bg-clip-text text-transparent leading-none">Diamond Art Studio</h1>
+                <p class="text-[10px] sm:text-xs text-gray-400 mt-0.5">Transform photos into shimmering gem paintings</p>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+            <!-- Save/Auto-save HUD status indicator -->
+            <div id="saveIndicator" class="hidden text-[10px] sm:text-xs text-gray-400 flex items-center gap-1.5 bg-gray-900/60 border border-gray-800 px-2.5 py-1.5 rounded-lg">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span id="saveIndicatorText">All progress saved</span>
+            </div>
+            <!-- Global Sound Toggle -->
+            <button id="soundToggle" class="touch-button p-2 rounded-lg bg-gray-800 hover:bg-gray-700 transition border border-gray-700 text-gray-300 hover:text-white" title="Toggle Sound FX">
+                <i data-lucide="volume-2" class="w-4 h-4 sm:w-5 sm:h-5"></i>
+            </button>
+            <button id="resetAppBtn" class="touch-button px-3 py-2 text-xs bg-gray-800 hover:bg-gray-700 transition border border-gray-700 rounded-lg text-gray-300 font-semibold" title="Start over">
+                New
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Workspace Container -->
+    <div class="flex-1 flex flex-col lg:flex-row overflow-hidden relative">
+
+        <!-- Stage 1: Setup Screen (Image Upload, Difficulty, Color Selector) -->
+        <div id="setupStage" class="flex-1 flex flex-col items-center justify-start p-4 sm:p-6 overflow-y-auto w-full">
+            <div class="w-full max-w-5xl grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 items-start py-4">
+                
+                <!-- Left side: Upload & Presets -->
+                <div class="glass-panel p-5 sm:p-8 rounded-2xl flex flex-col gap-5 sm:gap-6 shadow-xl">
+                    <h2 class="text-xl sm:text-2xl font-bold flex items-center gap-2 text-white">
+                        <i data-lucide="image-plus" class="text-violet-400"></i>
+                        1. Select Image Source
+                    </h2>
+
+                    <!-- Drag & Drop Zone -->
+                    <div id="dropZone" class="border-2 border-dashed border-gray-700 hover:border-violet-500 rounded-xl p-6 sm:p-8 text-center cursor-pointer transition bg-gray-900/40 hover:bg-gray-950/60 relative group">
+                        <input type="file" id="imageInput" accept="image/*" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
+                        <div class="flex flex-col items-center gap-3">
+                            <div class="p-3 rounded-full bg-violet-500/10 text-violet-400 group-hover:scale-110 transition duration-300">
+                                <i data-lucide="upload-cloud" class="w-8 h-8 sm:w-10 sm:h-10"></i>
+                            </div>
+                            <div>
+                                <span class="font-semibold text-violet-300 block text-sm sm:text-base">Tap/Click to upload</span>
+                                <span class="text-[10px] sm:text-xs text-gray-400">or drag and drop an image</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Built-in Templates -->
+                    <div>
+                        <span class="text-[10px] sm:text-xs font-semibold uppercase tracking-wider text-gray-400 block mb-3">Or choose a preset template:</span>
+                        <div class="grid grid-cols-4 gap-2 sm:gap-3">
+                            <button class="preset-btn group relative rounded-lg overflow-hidden border-2 border-violet-500 transition aspect-square" data-preset="sun">
+                                <img src="https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=150&q=60" alt="Mountain" class="w-full h-full object-cover group-hover:scale-110 transition duration-300">
+                                <div class="absolute inset-0 bg-black/40 flex items-end p-1">
+                                    <span class="text-[9px] sm:text-[10px] font-bold text-white truncate w-full">Mountain</span>
+                                </div>
+                            </button>
+                            <button class="preset-btn group relative rounded-lg overflow-hidden border-2 border-gray-800 hover:border-violet-500 transition aspect-square" data-preset="rose">
+                                <img src="https://images.unsplash.com/photo-1518709268805-4e9042af9f23?auto=format&fit=crop&w=150&q=60" alt="Flower" class="w-full h-full object-cover group-hover:scale-110 transition duration-300">
+                                <div class="absolute inset-0 bg-black/40 flex items-end p-1">
+                                    <span class="text-[9px] sm:text-[10px] font-bold text-white truncate w-full">Red Rose</span>
+                                </div>
+                            </button>
+                            <button class="preset-btn group relative rounded-lg overflow-hidden border-2 border-gray-800 hover:border-violet-500 transition aspect-square" data-preset="space">
+                                <img src="https://images.unsplash.com/photo-1462331940025-496dfbfc7564?auto=format&fit=crop&w=150&q=60" alt="Nebula" class="w-full h-full object-cover group-hover:scale-110 transition duration-300">
+                                <div class="absolute inset-0 bg-black/40 flex items-end p-1">
+                                    <span class="text-[9px] sm:text-[10px] font-bold text-white truncate w-full">Nebula</span>
+                                </div>
+                            </button>
+                            <button class="preset-btn group relative rounded-lg overflow-hidden border-2 border-gray-800 hover:border-violet-500 transition aspect-square" data-preset="pixel">
+                                <img src="https://images.unsplash.com/photo-1563089145-599997674d42?auto=format&fit=crop&w=150&q=60" alt="Neon" class="w-full h-full object-cover group-hover:scale-110 transition duration-300">
+                                <div class="absolute inset-0 bg-black/40 flex items-end p-1">
+                                    <span class="text-[9px] sm:text-[10px] font-bold text-white truncate w-full">Retro Neon</span>
+                                </div>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Selected Image Preview -->
+                    <div id="previewContainer" class="hidden flex items-center gap-3 sm:gap-4 bg-gray-900/60 p-3 rounded-xl border border-gray-800">
+                        <img id="sourcePreview" class="w-12 h-12 sm:w-16 sm:h-16 object-cover rounded-lg border border-gray-700 shadow" src="" alt="Preview">
+                        <div class="flex-1 overflow-hidden">
+                            <div class="text-xs sm:text-sm font-semibold text-gray-200 truncate" id="fileName">custom_image.png</div>
+                            <button id="removeImgBtn" class="text-[10px] sm:text-xs text-rose-400 hover:text-rose-300 flex items-center gap-1 mt-1 transition">
+                                <i data-lucide="trash-2" class="w-3 h-3"></i> Remove
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+
+                <!-- Right side: Game Settings & Generation -->
+                <div class="glass-panel p-5 sm:p-8 rounded-2xl flex flex-col gap-5 sm:gap-6 shadow-xl">
+                    <h2 class="text-xl sm:text-2xl font-bold flex items-center gap-2 text-white">
+                        <i data-lucide="sliders" class="text-fuchsia-400"></i>
+                        2. Setup Canvas Options
+                    </h2>
+
+                    <!-- Difficulty Configuration -->
+                    <div>
+                        <label class="text-xs sm:text-sm font-medium text-gray-300 block mb-2 sm:mb-3">Grid Size & Difficulty</label>
+                        <div class="grid grid-cols-2 gap-2 sm:gap-3" id="difficultyGrid">
+                            <!-- Easy -->
+                            <button type="button" class="diff-option p-3 sm:p-4 rounded-xl border-2 text-left transition border-violet-500/40 bg-violet-950/20" data-size="24">
+                                <div class="font-bold text-white text-xs sm:text-sm flex items-center gap-1 flex-wrap">
+                                    <span>Easy</span>
+                                    <span class="text-[9px] sm:text-[10px] bg-emerald-500/20 text-emerald-300 px-1.5 py-0.5 rounded-full font-medium">Fast</span>
+                                </div>
+                                <div class="text-[10px] sm:text-xs text-gray-400 mt-0.5">24 × 24 grid</div>
+                            </button>
+                            <!-- Medium -->
+                            <button type="button" class="diff-option p-3 sm:p-4 rounded-xl border-2 text-left transition border-gray-800 bg-gray-900/40 hover:border-gray-700" data-size="48">
+                                <div class="font-bold text-white text-xs sm:text-sm flex items-center gap-1 flex-wrap">
+                                    <span>Medium</span>
+                                    <span class="text-[9px] sm:text-[10px] bg-blue-500/20 text-blue-300 px-1.5 py-0.5 rounded-full font-medium">Standard</span>
+                                </div>
+                                <div class="text-[10px] sm:text-xs text-gray-400 mt-0.5">48 × 48 grid</div>
+                            </button>
+                            <!-- Hard -->
+                            <button type="button" class="diff-option p-3 sm:p-4 rounded-xl border-2 text-left transition border-gray-800 bg-gray-900/40 hover:border-gray-700" data-size="96">
+                                <div class="font-bold text-white text-xs sm:text-sm flex items-center gap-1 flex-wrap">
+                                    <span>Hard</span>
+                                    <span class="text-[9px] sm:text-[10px] bg-amber-500/20 text-amber-300 px-1.5 py-0.5 rounded-full font-medium">Detailed</span>
+                                </div>
+                                <div class="text-[10px] sm:text-xs text-gray-400 mt-0.5">96 × 96 grid</div>
+                            </button>
+                            <!-- Ultra Hard -->
+                            <button type="button" class="diff-option p-3 sm:p-4 rounded-xl border-2 text-left transition border-gray-800 bg-gray-900/40 hover:border-gray-700" data-size="160">
+                                <div class="font-bold text-white text-xs sm:text-sm flex items-center gap-1 flex-wrap">
+                                    <span>Ultra Hard</span>
+                                    <span class="text-[9px] sm:text-[10px] bg-rose-500/20 text-rose-300 px-1.5 py-0.5 rounded-full font-semibold">Huge</span>
+                                </div>
+                                <div class="text-[10px] sm:text-xs text-gray-400 mt-0.5">160 × 160 grid</div>
+                            </button>
+                            <!-- Ultra Mega Hard -->
+                            <button type="button" class="diff-option p-3 sm:p-4 rounded-xl border-2 text-left transition border-gray-800 bg-gray-900/40 hover:border-gray-700" data-size="200">
+                                <div class="font-bold text-white text-xs sm:text-sm flex items-center gap-1 flex-wrap">
+                                    <span>Ultra Mega</span>
+                                    <span class="text-[9px] sm:text-[10px] bg-purple-500/25 text-purple-300 px-1.5 py-0.5 rounded-full font-bold">X-Large</span>
+                                </div>
+                                <div class="text-[10px] sm:text-xs text-gray-400 mt-0.5">200 × 200 grid</div>
+                            </button>
+                            <!-- Legendary -->
+                            <button type="button" class="diff-option p-3 sm:p-4 rounded-xl border-2 text-left transition border-gray-800 bg-gray-900/40 hover:border-gray-700" data-size="250">
+                                <div class="font-bold text-white text-xs sm:text-sm flex items-center gap-1 flex-wrap">
+                                    <span>Legendary</span>
+                                    <span class="text-[9px] sm:text-[10px] bg-yellow-500/20 text-yellow-300 px-1.5 py-0.5 rounded-full font-extrabold">Max Spec</span>
+                                </div>
+                                <div class="text-[10px] sm:text-xs text-gray-400 mt-0.5">250 × 250 grid</div>
+                            </button>
+                        </div>
+                        <div id="deviceWarning" class="mt-2 text-[10px] text-amber-400 flex items-center gap-1 hidden">
+                            <i data-lucide="info" class="w-3.5 h-3.5"></i> Note: Large grids (200+) might load slower on some mobile devices.
+                        </div>
+                    </div>
+
+                    <!-- Colors Count Selector -->
+                    <div class="bg-gray-900/40 p-3 sm:p-4 rounded-xl border border-gray-800">
+                        <div class="flex justify-between items-center mb-1.5 sm:mb-2">
+                            <label class="text-xs sm:text-sm font-medium text-gray-300">Max Colors in Palette</label>
+                            <span class="text-xs sm:text-sm font-bold bg-violet-500/10 text-violet-400 px-2.5 py-0.5 rounded-full border border-violet-500/20" id="colorCountVal">40 Colors</span>
+                        </div>
+                        <input id="colorCountSlider" type="range" min="10" max="200" step="5" value="40" class="w-full accent-violet-500 h-1.5 bg-gray-800 rounded-lg appearance-none cursor-pointer">
+                        <div class="flex justify-between text-[10px] text-gray-500 mt-1">
+                            <span>10 Colors</span>
+                            <span>200 Colors (Full Spectrum)</span>
+                        </div>
+                    </div>
+
+                    <!-- Generation Button -->
+                    <button id="generateBtn" class="touch-button w-full py-3.5 bg-gradient-to-r from-violet-600 via-purple-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 text-white font-bold rounded-xl shadow-lg hover:shadow-violet-500/20 transition duration-300 flex items-center justify-center gap-2 group text-sm sm:text-base">
+                        <span>Initialize Studio Canvas</span>
+                        <i data-lucide="arrow-right" class="w-4 h-4 sm:w-5 sm:h-5 group-hover:translate-x-1 transition duration-300"></i>
+                    </button>
+                </div>
+
+            </div>
+
+            <!-- Cloud Saved Projects List Area -->
+            <div class="w-full max-w-5xl mt-6 lg:mt-8">
+                <div class="glass-panel p-5 sm:p-8 rounded-2xl shadow-xl border border-gray-800">
+                    <h3 class="text-lg sm:text-xl font-bold flex items-center gap-2 text-white mb-4">
+                        <i data-lucide="folder-heart" class="text-amber-400"></i>
+                        My Saved Projects
+                    </h3>
+                    <div id="savedProjectsList" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <!-- Dynamic loaded projects show here -->
+                        <div class="col-span-full py-8 text-center text-gray-500 text-xs flex flex-col items-center justify-center gap-2">
+                            <i data-lucide="cloud-off" class="w-8 h-8 text-gray-600"></i>
+                            <span>No projects found. Create your first piece above to sync with your cloud history!</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Stage 2: Playing/Canvas Board -->
+        <div id="gameStage" class="hidden flex-1 flex flex-col lg:flex-row overflow-hidden relative w-full">
+
+            <!-- Sidebar Container (Large Screens: Left Side; Mobile: Floating Top/Side Collapsible HUD) -->
+            <div id="sideControls" class="w-full lg:w-80 glass-panel border-b lg:border-b-0 lg:border-r border-gray-800 flex flex-row lg:flex-col shrink-0 overflow-y-auto lg:overflow-y-auto z-20 transition-all duration-300 max-h-[140px] lg:max-h-none">
+                
+                <!-- Compact Reference Thumbnail -->
+                <div class="p-3 lg:p-4 border-r lg:border-r-0 lg:border-b border-gray-800 flex items-center gap-3 lg:block shrink-0">
+                    <span class="text-[10px] lg:text-xs font-semibold uppercase tracking-wider text-gray-400 hidden lg:block mb-2">Original Reference</span>
+                    <div class="relative rounded-lg overflow-hidden border border-gray-700 bg-black w-14 h-14 lg:w-full lg:h-auto lg:aspect-video flex items-center justify-center shrink-0">
+                        <img id="referenceThumbnail" class="w-full h-full object-contain" src="" alt="Thumbnail">
+                        <div class="absolute bottom-1 right-1 bg-black/75 px-1.5 py-0.5 rounded text-[8px] lg:text-[10px] text-gray-300" id="canvasMeta">
+                            Grid: --
+                        </div>
+                    </div>
+                    <!-- Small screen stats row next to thumbnail -->
+                    <div class="lg:hidden flex flex-col justify-center">
+                        <div class="text-xs font-bold text-white flex items-center gap-1.5">
+                            <span class="text-violet-400">Progress:</span>
+                            <span id="mobilePercent">0%</span>
+                        </div>
+                        <div class="text-[10px] text-gray-400 mt-0.5" id="mobileGemsCount">0 / 0 Gems</div>
+                    </div>
+                </div>
+
+                <!-- Tools & Utilities -->
+                <div class="p-3 lg:p-4 border-r lg:border-r-0 lg:border-b border-gray-800 flex-1 lg:flex-none flex flex-col justify-center gap-2 lg:gap-3 shrink-0">
+                    <span class="text-[10px] lg:text-xs font-semibold uppercase tracking-wider text-gray-400 hidden lg:block">Tools</span>
+                    
+                    <div class="grid grid-cols-2 gap-2">
+                        <!-- Pencil Tool -->
+                        <button id="toolPencil" class="touch-button flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg border border-violet-500 bg-violet-950/20 text-white transition text-[11px] lg:text-xs font-semibold">
+                            <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                            Paint
+                        </button>
+                        <!-- Pan Tool -->
+                        <button id="toolPan" class="touch-button flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg border border-gray-800 hover:border-gray-700 bg-gray-900/60 hover:bg-gray-900 text-gray-400 hover:text-white transition text-[11px] lg:text-xs font-semibold">
+                            <i data-lucide="hand" class="w-3.5 h-3.5"></i>
+                            Pan
+                        </button>
+                    </div>
+
+                    <div class="flex items-center gap-1.5 mt-1 pt-1.5 border-t border-gray-800/60 justify-between lg:justify-start">
+                        <!-- Manual Cloud Save Trigger -->
+                        <button id="btnManualSave" class="touch-button flex-1 py-2 px-2.5 bg-gradient-to-r from-violet-600 to-fuchsia-600 hover:from-violet-500 hover:to-fuchsia-500 text-white font-bold rounded-lg transition duration-200 text-[11px] flex items-center justify-center gap-1">
+                            <i data-lucide="cloud-lightning" class="w-3.5 h-3.5"></i> Save Progress
+                        </button>
+                        <button id="btnRecenter" class="touch-button p-2 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white transition" title="Center/Fit Grid">
+                            <i data-lucide="minimize-2" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Visual Aids Toggles -->
+                <div class="p-4 border-b border-gray-800 hidden lg:flex flex-col gap-2.5">
+                    <span class="text-xs font-semibold uppercase tracking-wider text-gray-400 block">Visual Helpers</span>
+                    
+                    <label class="flex items-center justify-between text-xs text-gray-300 cursor-pointer">
+                        <span>Show Grid Lines</span>
+                        <input id="toggleGrid" type="checkbox" checked class="w-4 h-4 accent-violet-500 rounded">
+                    </label>
+
+                    <label class="flex items-center justify-between text-xs text-gray-300 cursor-pointer">
+                        <span>Show Symbol Letters</span>
+                        <input id="toggleSymbols" type="checkbox" checked class="w-4 h-4 accent-violet-500 rounded">
+                    </label>
+
+                    <label class="flex items-center justify-between text-xs text-gray-300 cursor-pointer">
+                        <span>Flash Target Symbols</span>
+                        <input id="toggleFlash" type="checkbox" checked class="w-4 h-4 accent-violet-500 rounded">
+                    </label>
+
+                    <label class="flex items-center justify-between text-xs text-gray-300 cursor-pointer">
+                        <span>Relaxed Mode</span>
+                        <input id="toggleRelax" type="checkbox" class="w-4 h-4 accent-violet-500 rounded">
+                    </label>
+                </div>
+
+                <!-- Stats / Actions (Desktop only) -->
+                <div class="p-4 mt-auto hidden lg:block">
+                    <div class="bg-violet-950/20 border border-violet-800/40 p-4 rounded-xl">
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="text-xs font-semibold text-violet-300 uppercase">Overall Progress</span>
+                            <span class="text-xs font-bold text-violet-200" id="overallPercent">0%</span>
+                        </div>
+                        <div class="w-full bg-gray-900 rounded-full h-2">
+                            <div id="overallProgressBar" class="bg-gradient-to-r from-violet-500 to-fuchsia-500 h-2 rounded-full transition-all duration-300" style="width: 0%"></div>
+                        </div>
+                        <div class="flex justify-between text-[10px] text-gray-400 mt-2">
+                            <span id="placedGemsText">0 / 0 Gems</span>
+                            <span id="remainingGemsText">0 Remaining</span>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Middle Container: The Canvas Viewport -->
+            <div class="flex-1 flex flex-col overflow-hidden relative bg-[#090c13] p-1 sm:p-4">
+                
+                <!-- Zoom Indicator HUD overlay -->
+                <div class="absolute top-2 left-2 sm:top-4 sm:left-4 z-20 flex gap-1.5 sm:gap-2 items-center bg-gray-900/90 backdrop-blur-md px-2.5 py-1 sm:py-1.5 rounded-lg border border-gray-800 text-[10px] sm:text-xs text-gray-300 shadow-md">
+                    <span id="zoomPercent" class="font-bold">100%</span>
+                    <button id="btnRecenterMobile" class="ml-1 px-1.5 py-0.5 bg-gray-800 hover:bg-gray-700 rounded text-[9px] font-semibold text-gray-300 border border-gray-700">Center</button>
+                    <div class="hidden sm:block w-px h-3 bg-gray-700 mx-1"></div>
+                    <span class="hidden sm:flex items-center gap-1 text-[10px]">
+                        <kbd class="px-1 bg-gray-800 rounded border border-gray-700">Ctrl</kbd> + Scroll to zoom
+                    </span>
+                </div>
+
+                <!-- Touch Device Mode Toggle Indicator -->
+                <div class="absolute top-2 right-2 sm:top-4 sm:right-4 z-20 flex gap-1 items-center bg-gray-900/95 border border-gray-800 rounded-lg p-1 shadow-md lg:hidden">
+                    <button id="btnHelperToggle" class="p-1 text-[10px] font-bold bg-violet-600 text-white rounded px-2" title="Helper Controls">
+                        Helpers
+                    </button>
+                </div>
+
+                <!-- Canvas Wrapper supporting smooth pan drag boundaries -->
+                <div id="canvasViewport" class="w-full h-full overflow-hidden flex items-center justify-center cursor-crosshair relative select-none">
+                    <canvas id="studioCanvas" class="shadow-2xl shadow-black/80 rounded-sm bg-gray-950"></canvas>
+                </div>
+
+                <!-- Bottom Floating Help bar (Desktop Only) -->
+                <div class="hidden sm:flex absolute bottom-4 left-1/2 -translate-x-1/2 z-20 items-center gap-4 bg-gray-950/90 backdrop-blur border border-gray-800 rounded-xl px-5 py-3 shadow-2xl shadow-black">
+                    <div class="flex items-center gap-3 text-xs text-gray-400">
+                        <span class="flex items-center gap-1"><i data-lucide="mouse-pointer" class="w-3.5 h-3.5 text-violet-400"></i> Tap / Click: Place Diamond</span>
+                        <div class="w-px h-3 bg-gray-800"></div>
+                        <span class="flex items-center gap-1"><i data-lucide="move" class="w-3.5 h-3.5 text-violet-400"></i> Drag mouse: Paint Brush</span>
+                        <div class="w-px h-3 bg-gray-800"></div>
+                        <span class="flex items-center gap-1"><kbd class="px-1 bg-gray-800 border border-gray-700 text-[10px] rounded">Space</kbd> + Drag to Pan</span>
+                    </div>
+                </div>
+
+                <!-- Completed Celebration Overlay -->
+                <div id="winOverlay" class="absolute inset-0 bg-black/95 backdrop-blur-md flex flex-col items-center justify-center z-50 transition-opacity duration-700 opacity-0 pointer-events-none p-4 text-center">
+                    <div class="max-w-md w-full bg-gradient-to-b from-gray-900 to-gray-950 p-6 sm:p-8 rounded-3xl border border-yellow-500/30 shadow-2xl relative overflow-hidden">
+                        
+                        <div class="absolute -top-10 -left-10 w-40 h-40 bg-fuchsia-500/10 blur-[80px]"></div>
+                        <div class="absolute -bottom-10 -right-10 w-40 h-40 bg-amber-500/10 blur-[80px]"></div>
+
+                        <div class="w-16 h-16 sm:w-20 sm:h-20 bg-yellow-500/10 rounded-full flex items-center justify-center text-yellow-400 border border-yellow-500/20 mx-auto mb-4 sm:mb-6">
+                            <i data-lucide="trophy" class="w-8 h-8 sm:w-10 sm:h-10 animate-bounce"></i>
+                        </div>
+                        
+                        <h3 class="text-2xl sm:text-3xl font-extrabold text-white mb-2 tracking-tight">Masterpiece Completed!</h3>
+                        <p class="text-xs sm:text-sm text-yellow-200/80 mb-4 sm:mb-6">You've successfully set all matching color diamonds with perfect precision!</p>
+
+                        <div class="grid grid-cols-2 gap-4 bg-gray-900/60 p-4 rounded-xl border border-gray-800 mb-6 text-left">
+                            <div>
+                                <span class="text-[10px] sm:text-xs text-gray-400 block">Grid Diamonds</span>
+                                <span id="winTotalGems" class="text-base sm:text-lg font-bold text-white">40,000</span>
+                            </div>
+                            <div>
+                                <span class="text-[10px] sm:text-xs text-gray-400 block">Palette Colors</span>
+                                <span id="winTotalColors" class="text-base sm:text-lg font-bold text-white">40</span>
+                            </div>
+                        </div>
+
+                        <div class="flex flex-col gap-2">
+                            <button id="btnShareFinished" class="touch-button w-full py-3 bg-gradient-to-r from-yellow-500 to-amber-600 hover:from-yellow-400 hover:to-amber-500 text-black font-bold rounded-xl transition shadow-lg shadow-yellow-500/10 flex items-center justify-center gap-2 text-sm">
+                                <i data-lucide="download" class="w-4 h-4"></i>
+                                Save Completed Artwork
+                            </button>
+                            <button id="btnWinClose" class="touch-button w-full py-3 bg-gray-800 hover:bg-gray-700 text-white rounded-xl transition text-xs sm:text-sm font-semibold border border-gray-700">
+                                Close & View Artwork
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- Right Controls: Diamond Palette -->
+            <div id="paletteSidebar" class="w-full lg:w-96 glass-panel border-t lg:border-t-0 lg:border-l border-gray-800 flex flex-col shrink-0 overflow-hidden z-10">
+                <div class="p-3 lg:p-4 border-b border-gray-800 flex justify-between items-center shrink-0">
+                    <div>
+                        <span class="text-xs font-semibold uppercase tracking-wider text-gray-400 block lg:inline">Colors & Gems</span>
+                        <span class="text-[10px] lg:text-[11px] text-gray-500 block lg:mt-0.5">Pick color to paint</span>
+                    </div>
+                    <!-- Quick action: auto locate missing ones -->
+                    <button id="btnAutoHighlight" class="touch-button p-1.5 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white transition text-[10px] sm:text-xs flex items-center gap-1" title="Highlight current target pixels">
+                        <i data-lucide="eye" class="w-3.5 h-3.5 text-violet-400"></i> Highlight
+                    </button>
+                </div>
+
+                <!-- Palette List Container (Grid/Flex Row on mobile, Vertical stack on desktop) -->
+                <div id="paletteList" class="flex-1 flex flex-row lg:flex-col overflow-x-auto lg:overflow-x-hidden lg:overflow-y-auto p-3 lg:p-4 gap-2 lg:space-y-2 select-none min-h-[84px] lg:min-h-0">
+                    <!-- Dynamic palette items populated here -->
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- Mobile Helpers / Settings Modal Drawer -->
+    <div id="helpersModal" class="fixed inset-0 bg-black/80 z-50 flex items-end sm:items-center justify-center p-4 opacity-0 pointer-events-none transition-opacity duration-300">
+        <div class="w-full max-w-sm bg-gray-900 border border-gray-800 rounded-2xl p-5 shadow-2xl transform translate-y-10 transition-transform duration-300" id="helpersContent">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-base font-bold text-white flex items-center gap-1.5">
+                    <i data-lucide="sliders" class="w-4 h-4 text-violet-400"></i> Settings & Helpers
+                </h3>
+                <button id="btnCloseHelpers" class="p-1 rounded bg-gray-800 text-gray-400 hover:text-white">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+            </div>
+            
+            <div class="flex flex-col gap-4">
+                <label class="flex items-center justify-between text-xs sm:text-sm text-gray-300 cursor-pointer">
+                    <span>Show Grid Lines</span>
+                    <input id="toggleGridMobile" type="checkbox" checked class="w-5 h-5 accent-violet-500 rounded">
+                </label>
+
+                <label class="flex items-center justify-between text-xs sm:text-sm text-gray-300 cursor-pointer">
+                    <span>Show Symbol Letters</span>
+                    <input id="toggleSymbolsMobile" type="checkbox" checked class="w-5 h-5 accent-violet-500 rounded">
+                </label>
+
+                <label class="flex items-center justify-between text-xs sm:text-sm text-gray-300 cursor-pointer">
+                    <span>Flash Selected Symbols</span>
+                    <input id="toggleFlashMobile" type="checkbox" checked class="w-5 h-5 accent-violet-500 rounded">
+                </label>
+
+                <label class="flex items-center justify-between text-xs sm:text-sm text-gray-300 cursor-pointer">
+                    <span>Relaxed Mode <span class="text-[10px] text-gray-500 block">Paint with any color</span></span>
+                    <input id="toggleRelaxMobile" type="checkbox" class="w-5 h-5 accent-violet-500 rounded">
+                </label>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden canvas for image scaling and color sampling -->
+    <canvas id="processingCanvas" class="hidden"></canvas>
+
+    <!-- Custom Popups/Toast Notification Container -->
+    <div id="toastContainer" class="fixed bottom-24 lg:bottom-6 right-4 sm:right-6 flex flex-col gap-2 z-50 pointer-events-none"></div>
+
+    <!-- Consolidated Module Script containing both app lifecycle and Firebase features -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInWithCustomToken, signInAnonymously, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, collection, query, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Initialize Lucide Icons globally
+        if (window.lucide) {
+            window.lucide.createIcons();
+        }
+
+        // Check if user is on touch/mobile device
+        const isTouchDevice = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+        const deviceWarning = document.getElementById('deviceWarning');
+        if (isTouchDevice && deviceWarning) {
+            deviceWarning.classList.remove('hidden');
+        }
+
+        // ----------------- Toast Messages -----------------
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            if (!container) return;
+            const toast = document.createElement('div');
+            toast.className = `glass-panel px-4 py-2.5 rounded-xl border flex items-center gap-2.5 transition duration-300 opacity-0 transform translate-y-2 text-[11px] sm:text-xs shadow-xl max-w-xs ${
+                type === 'success' ? 'border-emerald-500/40 text-emerald-300 bg-emerald-950/20' : 
+                type === 'error' ? 'border-rose-500/40 text-rose-300 bg-rose-950/20' : 'border-gray-800 text-gray-300 bg-gray-950/85'
+            }`;
+            
+            const iconName = type === 'success' ? 'check-circle' : type === 'error' ? 'alert-triangle' : 'info';
+            toast.innerHTML = `<i data-lucide="${iconName}" class="w-3.5 h-3.5 shrink-0"></i> <span class="leading-tight">${message}</span>`;
+            container.appendChild(toast);
+            
+            if (window.lucide) {
+                window.lucide.createIcons();
+            }
+            
+            setTimeout(() => {
+                toast.classList.remove('opacity-0', 'translate-y-2');
+            }, 50);
+
+            setTimeout(() => {
+                toast.classList.add('opacity-0', 'translate-y-2');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        // ----------------- App State -----------------
+        const state = {
+            projectId: null,       // Loaded or current Cloud UUID
+            projectName: "My Masterpiece",
+            presetName: "sun",     // Tracker for original preset template source
+            currentImgSrc: null,
+            gridSize: 48,
+            maxColors: 40,
+            activeTool: 'pencil', // 'pencil' or 'pan'
+            palette: [],          // Colors: { id, hex, r, g, b, symbol, count, placed }
+            gridData: [],         // 2D Array: representing design pixel indexes mapping to palette id
+            paintedGrid: [],      // 2D Array: representing user placements (id mapping or -1)
+            selectedPaletteIdx: 0, // Currently selected painting color index
+            zoom: 1,
+            panX: 0,
+            panY: 0,
+            isDragging: false,
+            startX: 0,
+            startY: 0,
+            showGrid: true,
+            showSymbols: true,
+            flashTargetSymbols: true,
+            relaxedMode: false,
+            isArtFinished: false,
+            isCanvasSpacePanning: false,
+            placedCountSinceSave: 0 // Auto save increment tracker
+        };
+
+        const BASE_CELL_SIZE = 32;
+
+        // ----------------- Firebase Setup -----------------
+        let db = null;
+        let auth = null;
+        let currentUser = null;
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'diamond-art-studio';
+
+        // Check if Firebase configs are provided at runtime
+        const initFirebase = async () => {
+            if (typeof __firebase_config !== 'undefined' && __firebase_config) {
+                try {
+                    const firebaseConfig = JSON.parse(__firebase_config);
+                    const app = initializeApp(firebaseConfig);
+                    auth = getAuth(app);
+                    db = getFirestore(app);
+
+                    // Sign-in before executing queries (RULE 3)
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                        await signInWithCustomToken(auth, __initial_auth_token);
+                    } else {
+                        await signInAnonymously(auth);
+                    }
+
+                    onAuthStateChanged(auth, (user) => {
+                        currentUser = user;
+                        if (currentUser) {
+                            loadSavedProjectsList();
+                        }
+                    });
+                } catch (error) {
+                    console.error("Firebase Auth initialization error:", error);
+                }
+            } else {
+                console.warn("No Firebase configuration found.");
+            }
+        };
+
+        // ----------------- Cloud Save / Load Algorithms -----------------
+
+        // Compress large 2D matrix grids to simple separated string layouts (under 1MB safety)
+        function serializeMatrix(matrix) {
+            return matrix.map(row => Array.from(row).join(',')).join(';');
+        }
+
+        function deserializeMatrix(str, size) {
+            const rows = str.split(';');
+            return rows.map(row => new Int16Array(row.split(',').map(Number)));
+        }
+
+        // manual or auto-save trigger function
+        async function saveProjectToCloud(isAutoSave = false) {
+            if (!db || !currentUser) return;
+
+            const saveIndicator = document.getElementById('saveIndicator');
+            const saveIndicatorText = document.getElementById('saveIndicatorText');
+
+            // Show Saving overlay
+            if (saveIndicator && saveIndicatorText) {
+                saveIndicator.classList.remove('hidden');
+                saveIndicatorText.innerText = isAutoSave ? "Auto-saving..." : "Saving progress...";
+            }
+
+            try {
+                if (!state.projectId) {
+                    state.projectId = crypto.randomUUID();
+                }
+
+                // Compile data package
+                const dataPayload = {
+                    id: state.projectId,
+                    name: state.projectName,
+                    presetName: state.presetName,
+                    gridSize: state.gridSize,
+                    maxColors: state.maxColors,
+                    palette: state.palette,
+                    gridDataString: serializeMatrix(state.gridData),
+                    paintedGridString: serializeMatrix(state.paintedGrid),
+                    updatedAt: Date.now()
+                };
+
+                // Follow Rule 1 for paths
+                const projectDocRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'projects', state.projectId);
+                await setDoc(projectDocRef, dataPayload);
+
+                const timeStr = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                if (saveIndicatorText) {
+                    saveIndicatorText.innerText = `Saved at ${timeStr}`;
+                }
+                state.placedCountSinceSave = 0;
+
+                if (!isAutoSave) {
+                    showToast("Progress successfully synced with Cloud!", "success");
+                }
+            } catch (err) {
+                console.error("Error saving progress:", err);
+                if (saveIndicatorText) {
+                    saveIndicatorText.innerText = "Cloud Save Error";
+                }
+                if (!isAutoSave) {
+                    showToast("Could not complete cloud save.", "error");
+                }
+            }
+        }
+
+        // Load specific project back in
+        async function loadProjectFromCloud(id) {
+            if (!db || !currentUser) return;
+            showToast("Restoring project session...", "info");
+
+            try {
+                const projectDocRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'projects', id);
+                const projectSnap = await getDoc(projectDocRef);
+
+                if (projectSnap.exists()) {
+                    const data = projectSnap.data();
+
+                    state.projectId = data.id;
+                    state.projectName = data.name;
+                    state.presetName = data.presetName;
+                    state.gridSize = data.gridSize;
+                    state.maxColors = data.maxColors;
+                    state.palette = data.palette;
+                    state.gridData = deserializeMatrix(data.gridDataString, data.gridSize);
+                    state.paintedGrid = deserializeMatrix(data.paintedGridString, data.gridSize);
+
+                    // Reconstruct canvas metadata
+                    document.getElementById('canvasMeta').innerText = `Grid: ${state.gridSize} × ${state.gridSize}`;
+                    state.selectedPaletteIdx = 0;
+                    state.zoom = 1;
+                    state.panX = 0;
+                    state.panY = 0;
+                    state.isArtFinished = false;
+                    document.getElementById('winOverlay').classList.add('opacity-0', 'pointer-events-none');
+
+                    // Set preview thumbnail
+                    const refCanvas = document.createElement('canvas');
+                    refCanvas.width = 120;
+                    refCanvas.height = 120;
+                    const refCtx = refCanvas.getContext('2d');
+                    const cellSize = 120 / state.gridSize;
+                    for (let y = 0; y < state.gridSize; y++) {
+                        for (let x = 0; x < state.gridSize; x++) {
+                            const c = state.palette[state.gridData[y][x]];
+                            refCtx.fillStyle = c.hex;
+                            refCtx.fillRect(x * cellSize, y * cellSize, cellSize + 0.5, cellSize + 0.5);
+                        }
+                    }
+                    referenceThumbnail.src = refCanvas.toDataURL();
+
+                    setupStage.classList.add('hidden');
+                    gameStage.classList.remove('hidden');
+
+                    recenterBoard();
+                    renderPalettePanel();
+                    updateProgressHUD();
+                    drawCanvas();
+
+                    showToast("Art workspace successfully resumed!", "success");
+                } else {
+                    showToast("Error locating workspace document.", "error");
+                }
+            } catch (error) {
+                console.error("Error restoring project document: ", error);
+                showToast("Could not load stored design.", "error");
+            }
+        }
+
+        // Delete cloud project reference
+        async function deleteProjectFromCloud(id, event) {
+            if (event) event.stopPropagation(); // Avoid triggering open card click
+            if (!db || !currentUser) return;
+
+            try {
+                const projectDocRef = doc(db, 'artifacts', appId, 'users', currentUser.uid, 'projects', id);
+                await deleteDoc(projectDocRef);
+                showToast("Project successfully removed.", "success");
+                loadSavedProjectsList();
+            } catch (error) {
+                console.error("Error deleting document: ", error);
+                showToast("Could not delete workspace document.", "error");
+            }
+        }
+
+        // Load List of Projects onto Front setup page
+        async function loadSavedProjectsList() {
+            if (!db || !currentUser) return;
+            const container = document.getElementById('savedProjectsList');
+            if (!container) return;
+            container.innerHTML = `<div class="col-span-full text-center text-xs text-gray-400 py-6">Checking cloud projects...</div>`;
+
+            try {
+                const q = query(collection(db, 'artifacts', appId, 'users', currentUser.uid, 'projects'));
+                const querySnapshot = await getDocs(q);
+
+                container.innerHTML = '';
+                const projects = [];
+
+                querySnapshot.forEach((doc) => {
+                    projects.push(doc.data());
+                });
+
+                // Sort by last updated dates in memory to adhere to Rule 2 (No Complex Queries)
+                projects.sort((a, b) => b.updatedAt - a.updatedAt);
+
+                if (projects.length === 0) {
+                    container.innerHTML = `
+                        <div class="col-span-full py-8 text-center text-gray-500 text-xs flex flex-col items-center justify-center gap-2">
+                            <i data-lucide="cloud-off" class="w-8 h-8 text-gray-600"></i>
+                            <span>No projects found. Create your first piece above to sync with your cloud history!</span>
+                        </div>
+                    `;
+                    if (window.lucide) {
+                        window.lucide.createIcons();
+                    }
+                    return;
+                }
+
+                projects.forEach((proj) => {
+                    const card = document.createElement('div');
+                    card.className = "p-4 rounded-xl border border-gray-800 bg-gray-900/40 hover:bg-gray-900/80 transition cursor-pointer flex flex-col justify-between gap-3 relative group";
+                    
+                    // Progress Calculation
+                    let total = proj.gridSize * proj.gridSize;
+                    let placed = 0;
+                    proj.palette.forEach(c => placed += c.placed);
+                    const pct = Math.floor((placed / total) * 100);
+
+                    card.innerHTML = `
+                        <div class="flex items-start justify-between gap-2">
+                            <div>
+                                <h4 class="font-bold text-sm text-white truncate max-w-[160px]">${proj.name}</h4>
+                                <span class="text-[10px] text-gray-400 font-medium bg-gray-800/80 border border-gray-700/60 rounded px-1.5 py-0.5 mt-1 inline-block">
+                                    ${proj.gridSize} × ${proj.gridSize} Size
+                                </span>
+                            </div>
+                            <button class="delete-proj-btn touch-button p-1.5 rounded-lg bg-rose-950/20 hover:bg-rose-950/60 border border-rose-500/20 text-rose-400 hover:text-rose-300 transition" title="Delete Saved Art">
+                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                        <div>
+                            <div class="flex justify-between items-center text-[10px] text-gray-400 mb-1">
+                                <span>Complete: ${pct}%</span>
+                                <span>${placed.toLocaleString()} gems</span>
+                            </div>
+                            <div class="w-full bg-gray-950 h-1.5 rounded-full overflow-hidden">
+                                <div class="bg-gradient-to-r from-violet-500 to-fuchsia-500 h-full" style="width: ${pct}%"></div>
+                            </div>
+                        </div>
+                    `;
+
+                    // Button Listeners
+                    card.querySelector('.delete-proj-btn').addEventListener('click', (e) => deleteProjectFromCloud(proj.id, e));
+                    card.addEventListener('click', () => loadProjectFromCloud(proj.id));
+
+                    container.appendChild(card);
+                });
+
+                if (window.lucide) {
+                    window.lucide.createIcons();
+                }
+            } catch (err) {
+                console.error("Error reading Cloud lists:", err);
+                container.innerHTML = `<div class="col-span-full text-center text-xs text-rose-400 py-6">Could not load saved list from Cloud database.</div>`;
+            }
+        }
+
+        // Setup manual trigger handler
+        const btnManualSave = document.getElementById('btnManualSave');
+        if (btnManualSave) {
+            btnManualSave.addEventListener('click', () => saveProjectToCloud(false));
+        }
+
+        // ----------------- Sound Synthesizer (Web Audio API) -----------------
+        const soundEnabled = { val: true };
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+        function playPopSound() {
+            if (!soundEnabled.val) return;
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(320, audioCtx.currentTime);
+            osc.frequency.exponentialRampToValueAtTime(1200, audioCtx.currentTime + 0.08);
+            
+            gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.08);
+            
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.08);
+        }
+
+        function playSuccessSound() {
+            if (!soundEnabled.val) return;
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            
+            const now = audioCtx.currentTime;
+            const playNote = (freq, delay, duration) => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(freq, now + delay);
+                gain.gain.setValueAtTime(0.06, now + delay);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + delay + duration);
+                osc.start(now + delay);
+                osc.stop(now + delay + duration);
+            };
+            
+            playNote(523.25, 0, 0.15);     // C5
+            playNote(587.33, 0.1, 0.15);   // D5
+            playNote(659.25, 0.2, 0.15);   // E5
+            playNote(783.99, 0.3, 0.15);   // G5
+            playNote(880.00, 0.4, 0.15);   // A5
+            playNote(1046.50, 0.5, 0.4);   // C6
+        }
+
+        // Toggle Sound Handler
+        const soundToggle = document.getElementById('soundToggle');
+        soundToggle.addEventListener('click', () => {
+            soundEnabled.val = !soundEnabled.val;
+            if (soundEnabled.val) {
+                soundToggle.classList.remove('text-gray-500', 'border-gray-800');
+                soundToggle.classList.add('text-gray-300', 'border-gray-700');
+                soundToggle.innerHTML = `<i data-lucide="volume-2" class="w-4 h-4 sm:w-5 sm:h-5"></i>`;
+            } else {
+                soundToggle.classList.remove('text-gray-300', 'border-gray-700');
+                soundToggle.classList.add('text-gray-500', 'border-gray-800');
+                soundToggle.innerHTML = `<i data-lucide="volume-x" class="w-4 h-4 sm:w-5 sm:h-5"></i>`;
+            }
+            if (window.lucide) {
+                window.lucide.createIcons();
+            }
+        });
+
+        // ----------------- App Interaction Setup -----------------
+        const imageInput = document.getElementById('imageInput');
+        const dropZone = document.getElementById('dropZone');
+        const previewContainer = document.getElementById('previewContainer');
+        const sourcePreview = document.getElementById('sourcePreview');
+        const fileName = document.getElementById('fileName');
+        const removeImgBtn = document.getElementById('removeImgBtn');
+        const colorCountSlider = document.getElementById('colorCountSlider');
+        const colorCountVal = document.getElementById('colorCountVal');
+        const generateBtn = document.getElementById('generateBtn');
+        const resetAppBtn = document.getElementById('resetAppBtn');
+        const presetBtns = document.querySelectorAll('.preset-btn');
+        const diffOptions = document.querySelectorAll('.diff-option');
+
+        let activeImagePreset = 'sun'; // Default
+
+        colorCountSlider.addEventListener('input', (e) => {
+            colorCountVal.innerText = `${e.target.value} Colors`;
+            state.maxColors = parseInt(e.target.value);
+        });
+
+        diffOptions.forEach(opt => {
+            opt.addEventListener('click', () => {
+                diffOptions.forEach(o => {
+                    o.classList.remove('border-violet-500/40', 'bg-violet-950/20');
+                    o.classList.add('border-gray-800', 'bg-gray-900/40');
+                });
+                opt.classList.add('border-violet-500/40', 'bg-violet-950/20');
+                opt.classList.remove('border-gray-800', 'bg-gray-900/40');
+                state.gridSize = parseInt(opt.getAttribute('data-size'));
+            });
+        });
+
+        imageInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) handleUploadedFile(file);
+        });
+
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('border-violet-500', 'bg-violet-950/20');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('border-violet-500', 'bg-violet-950/20');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('border-violet-500', 'bg-violet-950/20');
+            const file = e.dataTransfer.files[0];
+            if (file) handleUploadedFile(file);
+        });
+
+        function handleUploadedFile(file) {
+            if (!file.type.startsWith('image/')) {
+                showToast("Please upload an image file.", "error");
+                return;
+            }
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                state.currentImgSrc = event.target.result;
+                activeImagePreset = null;
+                
+                sourcePreview.src = event.target.result;
+                fileName.innerText = file.name;
+                previewContainer.classList.remove('hidden');
+                
+                presetBtns.forEach(btn => btn.classList.remove('border-violet-500'));
+                showToast("Custom image loaded successfully!");
+            };
+            reader.readAsDataURL(file);
+        }
+
+        removeImgBtn.addEventListener('click', () => {
+            state.currentImgSrc = null;
+            previewContainer.classList.add('hidden');
+            imageInput.value = '';
+            activeImagePreset = 'sun';
+            presetBtns[0].classList.add('border-violet-500');
+        });
+
+        presetBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                presetBtns.forEach(b => b.classList.remove('border-violet-500'));
+                btn.classList.add('border-violet-500');
+                activeImagePreset = btn.getAttribute('data-preset');
+                state.currentImgSrc = null;
+                previewContainer.classList.add('hidden');
+                imageInput.value = '';
+            });
+        });
+
+        generateBtn.addEventListener('click', () => {
+            initializeDiamondCanvas();
+        });
+
+        // ----------------- Core Game Logic & Canvas Studio -----------------
+        const studioCanvas = document.getElementById('studioCanvas');
+        const ctx = studioCanvas.getContext('2d');
+        const referenceThumbnail = document.getElementById('referenceThumbnail');
+        const setupStage = document.getElementById('setupStage');
+        const gameStage = document.getElementById('gameStage');
+
+        // Preloaded procedural canvas generators
+        const templates = {
+            sun: (ctx, width, height) => {
+                const grad = ctx.createLinearGradient(0, 0, 0, height);
+                grad.addColorStop(0, '#f97316');
+                grad.addColorStop(0.4, '#ec4899');
+                grad.addColorStop(1, '#1e1b4b');
+                ctx.fillStyle = grad;
+                ctx.fillRect(0, 0, width, height);
+
+                ctx.fillStyle = '#facc15';
+                ctx.beginPath();
+                ctx.arc(width * 0.5, height * 0.45, Math.min(width, height) * 0.25, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.fillStyle = '#0f172a';
+                ctx.beginPath();
+                ctx.moveTo(0, height);
+                ctx.lineTo(width * 0.35, height * 0.55);
+                ctx.lineTo(width * 0.7, height);
+                ctx.closePath();
+                ctx.fill();
+
+                ctx.fillStyle = '#1e293b';
+                ctx.beginPath();
+                ctx.moveTo(width * 0.4, height);
+                ctx.lineTo(width * 0.75, height * 0.62);
+                ctx.lineTo(width, height);
+                ctx.closePath();
+                ctx.fill();
+            },
+            rose: (ctx, width, height) => {
+                ctx.fillStyle = '#052e16';
+                ctx.fillRect(0, 0, width, height);
+
+                ctx.strokeStyle = '#15803d';
+                ctx.lineWidth = width * 0.05;
+                ctx.beginPath();
+                ctx.moveTo(width/2, height);
+                ctx.quadraticCurveTo(width/2 - width*0.1, height*0.7, width/2, height/2);
+                ctx.stroke();
+
+                ctx.fillStyle = '#166534';
+                ctx.beginPath();
+                ctx.ellipse(width/2 - width*0.12, height*0.72, width*0.15, width*0.06, Math.PI/4, 0, Math.PI*2);
+                ctx.fill();
+                
+                ctx.fillStyle = '#991b1b';
+                ctx.beginPath();
+                ctx.arc(width*0.5, height*0.45, width*0.28, 0, Math.PI*2);
+                ctx.fill();
+
+                ctx.fillStyle = '#dc2626';
+                ctx.beginPath();
+                ctx.arc(width*0.5, height*0.45, width*0.2, 0, Math.PI*2);
+                ctx.fill();
+
+                ctx.fillStyle = '#f43f5e';
+                ctx.beginPath();
+                ctx.arc(width*0.5, height*0.45, width*0.12, 0, Math.PI*2);
+                ctx.fill();
+
+                ctx.fillStyle = '#fda4af';
+                ctx.beginPath();
+                ctx.arc(width*0.48, height*0.43, width*0.05, 0, Math.PI*2);
+                ctx.fill();
+            },
+            space: (ctx, width, height) => {
+                ctx.fillStyle = '#03001e';
+                ctx.fillRect(0, 0, width, height);
+
+                const gradPink = ctx.createRadialGradient(width*0.3, height*0.4, 0, width*0.3, height*0.4, width*0.5);
+                gradPink.addColorStop(0, 'rgba(217, 70, 239, 0.45)');
+                gradPink.addColorStop(1, 'rgba(0,0,0,0)');
+                ctx.fillStyle = gradPink;
+                ctx.fillRect(0, 0, width, height);
+
+                const gradBlue = ctx.createRadialGradient(width*0.7, height*0.6, 0, width*0.7, height*0.6, width*0.5);
+                gradBlue.addColorStop(0, 'rgba(14, 165, 233, 0.45)');
+                gradBlue.addColorStop(1, 'rgba(0,0,0,0)');
+                ctx.fillStyle = gradBlue;
+                ctx.fillRect(0, 0, width, height);
+
+                ctx.fillStyle = '#ffffff';
+                for (let i = 0; i < 20; i++) {
+                    const rx = Math.random() * width;
+                    const ry = Math.random() * height;
+                    const rsize = Math.random() * (width * 0.02) + 1;
+                    ctx.beginPath();
+                    ctx.arc(rx, ry, rsize, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+
+                ctx.fillStyle = '#f59e0b';
+                ctx.beginPath();
+                ctx.arc(width * 0.55, height * 0.35, width * 0.12, 0, Math.PI * 2);
+                ctx.fill();
+
+                ctx.strokeStyle = '#d97706';
+                ctx.lineWidth = width * 0.03;
+                ctx.beginPath();
+                ctx.ellipse(width*0.55, height*0.35, width*0.22, width*0.05, -Math.PI/12, 0, Math.PI*2);
+                ctx.stroke();
+            },
+            pixel: (ctx, width, height) => {
+                const grad = ctx.createLinearGradient(0, 0, width, height);
+                grad.addColorStop(0, '#020617');
+                grad.addColorStop(0.5, '#4a044e');
+                grad.addColorStop(1, '#020617');
+                ctx.fillStyle = grad;
+                ctx.fillRect(0, 0, width, height);
+
+                ctx.strokeStyle = '#06b6d4';
+                ctx.lineWidth = 1;
+                const gridSpacing = width / 12;
+                for (let x = 0; x <= width; x += gridSpacing) {
+                    ctx.beginPath();
+                    ctx.moveTo(x, 0);
+                    ctx.lineTo(x, height);
+                    ctx.stroke();
+                }
+                for (let y = 0; y <= height; y += gridSpacing) {
+                    ctx.beginPath();
+                    ctx.moveTo(0, y);
+                    ctx.lineTo(width, y);
+                    ctx.stroke();
+                }
+
+                ctx.fillStyle = '#f43f5e';
+                ctx.beginPath();
+                ctx.arc(width/2, height/2, width*0.3, Math.PI, 0, false);
+                ctx.fill();
+
+                ctx.fillStyle = '#020617';
+                ctx.fillRect(0, height/2 - 2, width, 4);
+                ctx.fillRect(0, height/2 - 12, width, 3);
+                ctx.fillRect(0, height/2 - 20, width, 2);
+            }
+        };
+
+        const SYMBOLS_POOL = [
+            '1', '2', '3', '4', '5', '6', '7', '8', '9',
+            'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'J', 'K', 'L', 'M', 'N', 'P', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
+            '♥', '★', '♦', '♣', '♠', '▲', '▼', '●', '■', '☀', '☁', '⚡', '✿', '❄', '✪', '✔', '✝', '✨',
+            'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
+            '#', '@', '$', '%', '&', '?', '!', '+', '=', '>', '<', ':', ';', '∞', '♫', '★', '☾', '☘', '⚓', '⚖'
+        ];
+
+        // ----------------- Image Quantization K-Means Engine -----------------
+        function clusterColors(imageData, k) {
+            const data = imageData.data;
+            const pixels = [];
+            
+            for (let i = 0; i < data.length; i += 4) {
+                if (data[i+3] < 128) {
+                    pixels.push([0, 0, 0]);
+                } else {
+                    pixels.push([data[i], data[i+1], data[i+2]]);
+                }
+            }
+
+            let centroids = [];
+            if (pixels.length > 0) {
+                centroids.push(pixels[Math.floor(Math.random() * pixels.length)]);
+            } else {
+                centroids.push([0,0,0]);
+            }
+
+            for (let cIdx = 1; cIdx < k; cIdx++) {
+                if (centroids.length >= pixels.length) break;
+                
+                let maxDist = -1;
+                let nextSeed = pixels[0];
+                const sampleCount = Math.min(150, pixels.length);
+                
+                for (let step = 0; step < sampleCount; step++) {
+                    const candidate = pixels[Math.floor(Math.random() * pixels.length)];
+                    let minDist = Infinity;
+                    for (let j = 0; j < centroids.length; j++) {
+                        const d = distSq(candidate, centroids[j]);
+                        if (d < minDist) minDist = d;
+                    }
+                    if (minDist > maxDist) {
+                        maxDist = minDist;
+                        nextSeed = candidate;
+                    }
+                }
+                centroids.push(nextSeed);
+            }
+
+            const maxIterations = 4; // Faster response especially for large grids
+            let assignments = new Int16Array(pixels.length);
+
+            for (let iter = 0; iter < maxIterations; iter++) {
+                for (let p = 0; p < pixels.length; p++) {
+                    const pixel = pixels[p];
+                    let minD = Infinity;
+                    let bestCentroidIdx = 0;
+                    
+                    for (let c = 0; c < centroids.length; c++) {
+                        const d = distSq(pixel, centroids[c]);
+                        if (d < minD) {
+                            minD = d;
+                            bestCentroidIdx = c;
+                        }
+                    }
+                    assignments[p] = bestCentroidIdx;
+                }
+
+                const sums = Array.from({ length: centroids.length }, () => [0, 0, 0]);
+                const counts = new Int32Array(centroids.length);
+
+                for (let p = 0; p < pixels.length; p++) {
+                    const cluster = assignments[p];
+                    const pixel = pixels[p];
+                    sums[cluster][0] += pixel[0];
+                    sums[cluster][1] += pixel[1];
+                    sums[cluster][2] += pixel[2];
+                    counts[cluster]++;
+                }
+
+                for (let c = 0; c < centroids.length; c++) {
+                    if (counts[c] > 0) {
+                        centroids[c] = [
+                            Math.round(sums[c][0] / counts[c]),
+                            Math.round(sums[c][1] / counts[c]),
+                            Math.round(sums[c][2] / counts[c])
+                        ];
+                    }
+                }
+            }
+
+            return { centroids, assignments };
+        }
+
+        function distSq(colorA, colorB) {
+            const dr = colorA[0] - colorB[0];
+            const dg = colorA[1] - colorB[1];
+            const db = colorA[2] - colorB[2];
+            return dr*dr + dg*dg + db*db;
+        }
+
+        function rgbToHex(r, g, b) {
+            return "#" + ((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1);
+        }
+
+        function getContrastColor(r, g, b) {
+            const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+            return luminance > 0.5 ? '#000000' : '#ffffff';
+        }
+
+        function initializeDiamondCanvas() {
+            showToast("Generating Board... Please wait.", "info");
+            
+            const procCanvas = document.getElementById('processingCanvas');
+            const procCtx = procCanvas.getContext('2d');
+            const size = state.gridSize;
+            
+            procCanvas.width = size;
+            procCanvas.height = size;
+            procCtx.clearRect(0, 0, size, size);
+
+            // Generate fresh Cloud Project ID for clean session
+            state.projectId = crypto.randomUUID();
+
+            if (activeImagePreset) {
+                state.presetName = activeImagePreset;
+                state.projectName = activeImagePreset.charAt(0).toUpperCase() + activeImagePreset.slice(1) + " Canvas";
+                templates[activeImagePreset](procCtx, size, size);
+                processSampledImage(procCtx, size);
+            } else if (state.currentImgSrc) {
+                state.presetName = "custom_upload";
+                state.projectName = "Uploaded Art Piece";
+                const img = new Image();
+                img.onload = () => {
+                    const scale = Math.max(size / img.width, size / img.height);
+                    const x = (size / 2) - (img.width / 2) * scale;
+                    const y = (size / 2) - (img.height / 2) * scale;
+                    procCtx.drawImage(img, x, y, img.width * scale, img.height * scale);
+                    processSampledImage(procCtx, size);
+                };
+                img.src = state.currentImgSrc;
+            } else {
+                state.presetName = "sun";
+                state.projectName = "Mountain Sunrise";
+                templates['sun'](procCtx, size, size);
+                processSampledImage(procCtx, size);
+            }
+        }
+
+        function processSampledImage(procCtx, size) {
+            const rawImgData = procCtx.getImageData(0, 0, size, size);
+            const { centroids, assignments } = clusterColors(rawImgData, state.maxColors);
+
+            state.palette = centroids.map((color, idx) => {
+                const hex = rgbToHex(color[0], color[1], color[2]);
+                return {
+                    id: idx,
+                    hex: hex,
+                    r: color[0],
+                    g: color[1],
+                    b: color[2],
+                    contrast: getContrastColor(color[0], color[1], color[2]),
+                    symbol: SYMBOLS_POOL[idx % SYMBOLS_POOL.length],
+                    count: 0,
+                    placed: 0
+                };
+            });
+
+            state.gridData = Array.from({ length: size }, () => new Int16Array(size));
+            state.paintedGrid = Array.from({ length: size }, () => new Int16Array(size).fill(-1));
+
+            let assignmentIdx = 0;
+            for (let y = 0; y < size; y++) {
+                for (let x = 0; x < size; x++) {
+                    const colorId = assignments[assignmentIdx++];
+                    state.gridData[y][x] = colorId;
+                    state.palette[colorId].count++;
+                }
+            }
+
+            state.palette = state.palette.filter(c => c.count > 0);
+            
+            state.palette.forEach((c, idx) => {
+                const oldId = c.id;
+                c.id = idx;
+                
+                for (let y = 0; y < size; y++) {
+                    for (let x = 0; x < size; x++) {
+                        if (state.gridData[y][x] === oldId) {
+                            state.gridData[y][x] = idx;
+                        }
+                    }
+                }
+            });
+
+            // Set up original thumbnail reference image to show in sidebar
+            const refCanvas = document.createElement('canvas');
+            refCanvas.width = 120;
+            refCanvas.height = 120;
+            const refCtx = refCanvas.getContext('2d');
+            const cellSize = 120 / size;
+            for (let y = 0; y < size; y++) {
+                for (let x = 0; x < size; x++) {
+                    const c = state.palette[state.gridData[y][x]];
+                    refCtx.fillStyle = c.hex;
+                    refCtx.fillRect(x * cellSize, y * cellSize, cellSize + 0.5, cellSize + 0.5);
+                }
+            }
+            referenceThumbnail.src = refCanvas.toDataURL();
+            document.getElementById('canvasMeta').innerText = `Grid: ${size} × ${size}`;
+
+            state.selectedPaletteIdx = 0;
+            state.zoom = 1;
+            state.panX = 0;
+            state.panY = 0;
+            state.isArtFinished = false;
+            state.placedCountSinceSave = 0;
+            document.getElementById('winOverlay').classList.add('opacity-0', 'pointer-events-none');
+
+            // Reset Saving status box
+            const saveIndicator = document.getElementById('saveIndicator');
+            saveIndicator.classList.add('hidden');
+
+            // Switch stages FIRST so elements are visible and browser can measure their sizes!
+            setupStage.classList.add('hidden');
+            gameStage.classList.remove('hidden');
+
+            // Now compute fit-recenter layout with actual dimensions
+            recenterBoard();
+
+            renderPalettePanel();
+            updateProgressHUD();
+            drawCanvas();
+
+            // Store initial game save state
+            saveProjectToCloud(true);
+            
+            showToast("Diamond board loaded! Tap colors at the bottom/side to paint.", "success");
+        }
+
+        function recenterBoard() {
+            const viewport = document.getElementById('canvasViewport');
+            let w = viewport.clientWidth;
+            let h = viewport.clientHeight;
+            
+            // Safety fallback if measured at zero during quick rendering shifts
+            if (w === 0 || h === 0) {
+                w = window.innerWidth || 360;
+                h = (window.innerHeight - 240) || 400; 
+            }
+
+            const targetDim = Math.min(w, h) * 0.85;
+            state.zoom = targetDim / (state.gridSize * BASE_CELL_SIZE);
+            state.panX = (w - (state.gridSize * BASE_CELL_SIZE * state.zoom)) / 2;
+            state.panY = (h - (state.gridSize * BASE_CELL_SIZE * state.zoom)) / 2;
+            document.getElementById('zoomPercent').innerText = `${Math.round(state.zoom * 100)}%`;
+        }
+
+        resetAppBtn.addEventListener('click', () => {
+            gameStage.classList.add('hidden');
+            setupStage.classList.remove('hidden');
+            state.currentImgSrc = null;
+            previewContainer.classList.add('hidden');
+            imageInput.value = '';
+            loadSavedProjectsList();
+        });
+
+        // ----------------- Sidebar / Bottom Swipeable Palette Render -----------------
+        function renderPalettePanel() {
+            const list = document.getElementById('paletteList');
+            list.innerHTML = '';
+
+            state.palette.forEach((color, idx) => {
+                const item = document.createElement('div');
+                const isSelected = idx === state.selectedPaletteIdx;
+                const isCompleted = color.placed >= color.count;
+                
+                // Optimized classes for both desktop list view and mobile slide view
+                item.className = `flex items-center justify-between p-2 lg:p-2.5 rounded-xl border transition cursor-pointer shrink-0 ${
+                    isSelected ? 'border-violet-500 bg-violet-950/30 ring-2 ring-violet-500/50' : 'border-gray-800 bg-gray-900/40 hover:bg-gray-900/60'
+                } ${isCompleted ? 'opacity-50' : ''} min-w-[110px] lg:min-w-0 lg:w-full`;
+
+                const leftSide = document.createElement('div');
+                leftSide.className = "flex items-center gap-2 sm:gap-3 overflow-hidden";
+                
+                const gemIndicator = document.createElement('div');
+                gemIndicator.className = "w-8 h-8 lg:w-10 lg:h-10 rounded-full flex items-center justify-center font-bold text-xs lg:text-sm shadow-inner relative shrink-0 border border-white/10";
+                gemIndicator.style.backgroundColor = color.hex;
+                gemIndicator.style.color = color.contrast;
+                gemIndicator.innerHTML = `
+                    <span>${color.symbol}</span>
+                    <div class="absolute inset-0.5 rounded-full border border-white/20 opacity-30"></div>
+                `;
+
+                const labelWrapper = document.createElement('div');
+                labelWrapper.className = "flex flex-col text-left truncate";
+                
+                const codeName = document.createElement('span');
+                codeName.className = "font-extrabold text-[10px] lg:text-xs text-white uppercase tracking-wider";
+                codeName.innerText = `#${color.id + 1}`;
+                
+                const progressText = document.createElement('span');
+                progressText.className = "text-[9px] lg:text-[10px] font-mono text-gray-400";
+                progressText.innerText = `${color.placed}/${color.count}`;
+
+                labelWrapper.appendChild(codeName);
+                labelWrapper.appendChild(progressText);
+                leftSide.appendChild(gemIndicator);
+                leftSide.appendChild(labelWrapper);
+
+                const rightSide = document.createElement('div');
+                rightSide.className = "hidden lg:flex items-center gap-2.5";
+
+                if (isCompleted) {
+                    const completeCheck = document.createElement('div');
+                    completeCheck.className = "w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center border border-emerald-500/30";
+                    completeCheck.innerHTML = `<i data-lucide="check" class="w-3 h-3"></i>`;
+                    rightSide.appendChild(completeCheck);
+                } else {
+                    const progressCircle = document.createElement('div');
+                    progressCircle.className = "w-4 h-4 rounded-full border border-gray-700 relative";
+                    const fillPercent = (color.placed / color.count) * 100;
+                    progressCircle.innerHTML = `
+                        <div class="absolute inset-0.5 bg-violet-500/30 rounded-full scale-0 transition-transform duration-300" style="transform: scale(${fillPercent/100})"></div>
+                    `;
+                    rightSide.appendChild(progressCircle);
+                }
+
+                item.appendChild(leftSide);
+                item.appendChild(rightSide);
+
+                // Select Item on click / touch
+                item.addEventListener('click', () => {
+                    state.selectedPaletteIdx = idx;
+                    renderPalettePanel();
+                    drawCanvas();
+                    // Auto scroll selected element into view horizontally on mobile
+                    if (window.innerWidth < 1024) {
+                        item.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+                    }
+                });
+
+                list.appendChild(item);
+            });
+
+            if (window.lucide) {
+                window.lucide.createIcons();
+            }
+        }
+
+        // ----------------- Canvas Rendering System -----------------
+
+        function getCellWorldCoords(gridX, gridY) {
+            const size = BASE_CELL_SIZE * state.zoom;
+            const x = state.panX + gridX * size;
+            const y = state.panY + gridY * size;
+            return { x, y, size };
+        }
+
+        function getGridCoordsFromWorld(worldX, worldY) {
+            const size = BASE_CELL_SIZE * state.zoom;
+            const gridX = Math.floor((worldX - state.panX) / size);
+            const gridY = Math.floor((worldY - state.panY) / size);
+            return { gridX, gridY };
+        }
+
+        let animationFrameId = null;
+
+        function drawCanvas() {
+            if (animationFrameId) {
+                cancelAnimationFrame(animationFrameId);
+            }
+            animationFrameId = requestAnimationFrame(drawCanvasEngine);
+        }
+
+        let flashTick = 0;
+        function drawCanvasEngine() {
+            const viewport = document.getElementById('canvasViewport');
+            if (studioCanvas.width !== viewport.clientWidth || studioCanvas.height !== viewport.clientHeight) {
+                studioCanvas.width = viewport.clientWidth;
+                studioCanvas.height = viewport.clientHeight;
+            }
+
+            ctx.fillStyle = '#0b0f19';
+            ctx.fillRect(0, 0, studioCanvas.width, studioCanvas.height);
+
+            const gSize = state.gridSize;
+            
+            flashTick += 0.045;
+            const highlightPulseOpacity = 0.35 + 0.35 * Math.sin(flashTick * 2.5);
+
+            for (let y = 0; y < gSize; y++) {
+                for (let x = 0; x < gSize; x++) {
+                    const worldPos = getCellWorldCoords(x, y);
+
+                    // Frustum Culling
+                    if (worldPos.x + worldPos.size < 0 || worldPos.y + worldPos.size < 0 ||
+                        worldPos.x > studioCanvas.width || worldPos.y > studioCanvas.height) {
+                        continue;
+                    }
+
+                    const targetColorId = state.gridData[y][x];
+                    const paintedColorId = state.paintedGrid[y][x];
+                    const colorData = state.palette[targetColorId];
+
+                    if (paintedColorId !== -1) {
+                        const paintedColorObj = state.palette[paintedColorId];
+                        drawDiamondGem(ctx, worldPos.x, worldPos.y, worldPos.size, paintedColorObj.hex);
+                    } else {
+                        ctx.fillStyle = '#111827';
+                        ctx.fillRect(worldPos.x, worldPos.y, worldPos.size, worldPos.size);
+
+                        if (state.flashTargetSymbols && targetColorId === state.selectedPaletteIdx) {
+                            ctx.fillStyle = `rgba(139, 92, 246, ${0.1 + highlightPulseOpacity * 0.15})`;
+                            ctx.fillRect(worldPos.x, worldPos.y, worldPos.size, worldPos.size);
+                        }
+
+                        if (state.showGrid) {
+                            ctx.strokeStyle = '#1e293b';
+                            ctx.lineWidth = 1;
+                            ctx.strokeRect(worldPos.x, worldPos.y, worldPos.size, worldPos.size);
+                        }
+
+                        if (state.showSymbols) {
+                            ctx.fillStyle = (state.flashTargetSymbols && targetColorId === state.selectedPaletteIdx) ? '#d8b4fe' : '#4b5563';
+                            ctx.font = `bold ${Math.max(7, worldPos.size * 0.42)}px 'Plus Jakarta Sans', monospace`;
+                            ctx.textAlign = 'center';
+                            ctx.textBaseline = 'middle';
+                            ctx.fillText(colorData.symbol, worldPos.x + worldPos.size / 2, worldPos.y + worldPos.size / 2);
+                        }
+                    }
+
+                    if (state.flashTargetSymbols && targetColorId === state.selectedPaletteIdx && paintedColorId === -1) {
+                        ctx.strokeStyle = `rgba(168, 85, 247, ${highlightPulseOpacity})`;
+                        ctx.lineWidth = Math.max(1, state.zoom * 1.5);
+                        ctx.strokeRect(worldPos.x, worldPos.y, worldPos.size, worldPos.size);
+                    }
+                }
+            }
+
+            if (state.flashTargetSymbols) {
+                animationFrameId = requestAnimationFrame(drawCanvasEngine);
+            }
+        }
+
+        function drawDiamondGem(ctx, x, y, size, hex) {
+            const cx = x + size / 2;
+            const cy = y + size / 2;
+            const r = size * 0.42;
+
+            ctx.beginPath();
+            ctx.arc(cx, cy, r, 0, Math.PI * 2);
+            ctx.fillStyle = hex;
+            ctx.fill();
+
+            const grad = ctx.createRadialGradient(cx - r*0.35, cy - r*0.35, 1, cx, cy, r);
+            grad.addColorStop(0, 'rgba(255, 255, 255, 0.45)');
+            grad.addColorStop(0.2, 'rgba(255, 255, 255, 0.15)');
+            grad.addColorStop(0.65, 'rgba(0, 0, 0, 0.2)');
+            grad.addColorStop(1, 'rgba(0, 0, 0, 0.65)');
+
+            ctx.beginPath();
+            ctx.arc(cx, cy, r, 0, Math.PI * 2);
+            ctx.fillStyle = grad;
+            ctx.fill();
+
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+            ctx.lineWidth = Math.max(0.6, size * 0.02);
+            ctx.beginPath();
+            ctx.arc(cx, cy, r * 0.7, 0, Math.PI * 2);
+            ctx.moveTo(cx - r * 0.7, cy);
+            ctx.lineTo(cx + r * 0.7, cy);
+            ctx.moveTo(cx, cy - r * 0.7);
+            ctx.lineTo(cx, cy + r * 0.7);
+            ctx.stroke();
+
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.55)';
+            ctx.beginPath();
+            ctx.arc(cx - r * 0.35, cy - r * 0.35, r * 0.12, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // Recenter Button listeners
+        document.getElementById('btnRecenter').addEventListener('click', recenterBoard);
+        document.getElementById('btnRecenterMobile').addEventListener('click', recenterBoard);
+
+        // Toggle Grid/Symbols Helpers
+        const toggleGrid = document.getElementById('toggleGrid');
+        const toggleSymbols = document.getElementById('toggleSymbols');
+        const toggleFlash = document.getElementById('toggleFlash');
+        const toggleRelax = document.getElementById('toggleRelax');
+
+        const toggleGridMobile = document.getElementById('toggleGridMobile');
+        const toggleSymbolsMobile = document.getElementById('toggleSymbolsMobile');
+        const toggleFlashMobile = document.getElementById('toggleFlashMobile');
+        const toggleRelaxMobile = document.getElementById('toggleRelaxMobile');
+
+        function syncHelperStates(source) {
+            if (source === 'desktop') {
+                state.showGrid = toggleGrid.checked;
+                state.showSymbols = toggleSymbols.checked;
+                state.flashTargetSymbols = toggleFlash.checked;
+                state.relaxedMode = toggleRelax.checked;
+
+                toggleGridMobile.checked = state.showGrid;
+                toggleSymbolsMobile.checked = state.showSymbols;
+                toggleFlashMobile.checked = state.flashTargetSymbols;
+                toggleRelaxMobile.checked = state.relaxedMode;
+            } else {
+                state.showGrid = toggleGridMobile.checked;
+                state.showSymbols = toggleSymbolsMobile.checked;
+                state.flashTargetSymbols = toggleFlashMobile.checked;
+                state.relaxedMode = toggleRelaxMobile.checked;
+
+                toggleGrid.checked = state.showGrid;
+                toggleSymbols.checked = state.showSymbols;
+                toggleFlash.checked = state.flashTargetSymbols;
+                toggleRelax.checked = state.relaxedMode;
+            }
+            drawCanvas();
+        }
+
+        toggleGrid.addEventListener('change', () => syncHelperStates('desktop'));
+        toggleSymbols.addEventListener('change', () => syncHelperStates('desktop'));
+        toggleFlash.addEventListener('change', () => syncHelperStates('desktop'));
+        toggleRelax.addEventListener('change', () => syncHelperStates('desktop'));
+
+        toggleGridMobile.addEventListener('change', () => syncHelperStates('mobile'));
+        toggleSymbolsMobile.addEventListener('change', () => syncHelperStates('mobile'));
+        toggleFlashMobile.addEventListener('change', () => syncHelperStates('mobile'));
+        toggleRelaxMobile.addEventListener('change', () => syncHelperStates('mobile'));
+
+        // Highlight Button
+        document.getElementById('btnAutoHighlight').addEventListener('click', () => {
+            const targetColorObj = state.palette[state.selectedPaletteIdx];
+            showToast(`Unpainted areas of color #${targetColorObj.id+1} (${targetColorObj.symbol}) are flashing.`, "info");
+        });
+
+        // Tool Toggles
+        const btnPencil = document.getElementById('toolPencil');
+        const btnPan = document.getElementById('toolPan');
+
+        function setTool(toolName) {
+            state.activeTool = toolName;
+            const vp = document.getElementById('canvasViewport');
+            if (toolName === 'pencil') {
+                btnPencil.className = "touch-button flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg border border-violet-500 bg-violet-950/20 text-white transition text-[11px] lg:text-xs font-semibold flex-1";
+                btnPan.className = "touch-button flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg border border-gray-800 hover:border-gray-700 bg-gray-900/60 hover:bg-gray-900 text-gray-400 hover:text-white transition text-[11px] lg:text-xs font-semibold flex-1";
+                vp.style.cursor = 'crosshair';
+            } else {
+                btnPan.className = "touch-button flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg border border-violet-500 bg-violet-950/20 text-white transition text-[11px] lg:text-xs font-semibold flex-1";
+                btnPencil.className = "touch-button flex items-center justify-center gap-1.5 px-2 py-2 rounded-lg border border-gray-800 hover:border-gray-700 bg-gray-900/60 hover:bg-gray-900 text-gray-400 hover:text-white transition text-[11px] lg:text-xs font-semibold flex-1";
+                vp.style.cursor = 'grab';
+            }
+        }
+
+        btnPencil.addEventListener('click', () => setTool('pencil'));
+        btnPan.addEventListener('click', () => setTool('pan'));
+
+        // ----------------- Mouse / Touch Interactions & Controls -----------------
+        const viewport = document.getElementById('canvasViewport');
+
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' && !state.isCanvasSpacePanning) {
+                state.isCanvasSpacePanning = true;
+                viewport.style.cursor = 'grab';
+            }
+        });
+
+        window.addEventListener('keyup', (e) => {
+            if (e.code === 'Space') {
+                state.isCanvasSpacePanning = false;
+                viewport.style.cursor = state.activeTool === 'pencil' ? 'crosshair' : 'grab';
+            }
+        });
+
+        // Mouse Handlers
+        viewport.addEventListener('mousedown', (e) => {
+            state.isDragging = true;
+            state.startX = e.clientX;
+            state.startY = e.clientY;
+
+            if (state.activeTool === 'pan' || state.isCanvasSpacePanning) {
+                viewport.style.cursor = 'grabbing';
+            } else {
+                paintDiamondAtCursor(e);
+            }
+        });
+
+        window.addEventListener('mousemove', (e) => {
+            if (!state.isDragging) return;
+
+            if (state.activeTool === 'pan' || state.isCanvasSpacePanning) {
+                const dx = e.clientX - state.startX;
+                const dy = e.clientY - state.startY;
+                state.panX += dx;
+                state.panY += dy;
+                state.startX = e.clientX;
+                state.startY = e.clientY;
+                drawCanvas();
+            } else {
+                paintDiamondAtCursor(e);
+            }
+        });
+
+        window.addEventListener('mouseup', () => {
+            state.isDragging = false;
+            if (state.activeTool === 'pan' || state.isCanvasSpacePanning) {
+                viewport.style.cursor = state.isCanvasSpacePanning ? 'grab' : (state.activeTool === 'pan' ? 'grab' : 'crosshair');
+            }
+        });
+
+        // Mouse Zoom Wheel
+        viewport.addEventListener('wheel', (e) => {
+            e.preventDefault();
+
+            const rect = studioCanvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+
+            const relativeX = (mouseX - state.panX) / state.zoom;
+            const relativeY = (mouseY - state.panY) / state.zoom;
+
+            const zoomFactor = e.deltaY < 0 ? 1.15 : 0.85;
+            state.zoom = Math.min(10, Math.max(0.15, state.zoom * zoomFactor));
+
+            state.panX = mouseX - relativeX * state.zoom;
+            state.panY = mouseY - relativeY * state.zoom;
+
+            document.getElementById('zoomPercent').innerText = `${Math.round(state.zoom * 100)}%`;
+            drawCanvas();
+        });
+
+        // --- Touch Event Handlers ---
+        let lastTouchDist = null;
+
+        function getTouchDist(t1, t2) {
+            const dx = t1.clientX - t2.clientX;
+            const dy = t1.clientY - t2.clientY;
+            return Math.sqrt(dx*dx + dy*dy);
+        }
+
+        viewport.addEventListener('touchstart', (e) => {
+            state.isDragging = true;
+            
+            if (e.touches.length === 1) {
+                state.startX = e.touches[0].clientX;
+                state.startY = e.touches[0].clientY;
+                
+                if (state.activeTool === 'pencil') {
+                    const rect = studioCanvas.getBoundingClientRect();
+                    const tx = e.touches[0].clientX - rect.left;
+                    const ty = e.touches[0].clientY - rect.top;
+                    const { gridX, gridY } = getGridCoordsFromWorld(tx, ty);
+                    attemptPlacingDiamond(gridX, gridY);
+                }
+            } else if (e.touches.length === 2) {
+                lastTouchDist = getTouchDist(e.touches[0], e.touches[1]);
+            }
+        }, { passive: true });
+
+        viewport.addEventListener('touchmove', (e) => {
+            if (!state.isDragging) return;
+
+            if (e.touches.length === 1) {
+                const touch = e.touches[0];
+                if (state.activeTool === 'pan') {
+                    const dx = touch.clientX - state.startX;
+                    const dy = touch.clientY - state.startY;
+                    state.panX += dx;
+                    state.panY += dy;
+                    state.startX = touch.clientX;
+                    state.startY = touch.clientY;
+                    drawCanvas();
+                } else if (state.activeTool === 'pencil') {
+                    const rect = studioCanvas.getBoundingClientRect();
+                    const tx = touch.clientX - rect.left;
+                    const ty = touch.clientY - rect.top;
+                    const { gridX, gridY } = getGridCoordsFromWorld(tx, ty);
+                    attemptPlacingDiamond(gridX, gridY);
+                }
+            } else if (e.touches.length === 2 && lastTouchDist !== null) {
+                const dist = getTouchDist(e.touches[0], e.touches[1]);
+                const midX = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+                const midY = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+
+                const rect = studioCanvas.getBoundingClientRect();
+                const relativeX = (midX - rect.left - state.panX) / state.zoom;
+                const relativeY = (midY - rect.top - state.panY) / state.zoom;
+
+                const zoomFactor = dist / lastTouchDist;
+                state.zoom = Math.min(10, Math.max(0.15, state.zoom * zoomFactor));
+
+                state.panX = (midX - rect.left) - relativeX * state.zoom;
+                state.panY = (midY - rect.top) - relativeY * state.zoom;
+
+                lastTouchDist = dist;
+                document.getElementById('zoomPercent').innerText = `${Math.round(state.zoom * 100)}%`;
+                drawCanvas();
+            }
+        }, { passive: true });
+
+        viewport.addEventListener('touchend', (e) => {
+            if (e.touches.length < 2) {
+                lastTouchDist = null;
+            }
+            if (e.touches.length === 0) {
+                state.isDragging = false;
+            }
+        });
+
+        window.addEventListener('resize', () => {
+            if (!gameStage.classList.contains('hidden')) {
+                recenterBoard();
+                drawCanvas();
+            }
+        });
+
+        function paintDiamondAtCursor(e) {
+            const rect = studioCanvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+
+            const { gridX, gridY } = getGridCoordsFromWorld(mouseX, mouseY);
+            attemptPlacingDiamond(gridX, gridY);
+        }
+
+        function attemptPlacingDiamond(x, y) {
+            if (x < 0 || x >= state.gridSize || y < 0 || y >= state.gridSize) return;
+
+            const targetColorId = state.gridData[y][x];
+            const alreadyPainted = state.paintedGrid[y][x] !== -1;
+
+            if (alreadyPainted) return;
+
+            if (state.relaxedMode || targetColorId === state.selectedPaletteIdx) {
+                state.paintedGrid[y][x] = targetColorId;
+                state.palette[targetColorId].placed++;
+
+                playPopSound();
+
+                updateProgressHUD();
+                drawCanvas();
+
+                // Trigger auto-save every 15 actions to optimize cloud database writes
+                state.placedCountSinceSave++;
+                if (state.placedCountSinceSave >= 15) {
+                    saveProjectToCloud(true);
+                }
+
+                if (state.palette[targetColorId].placed === state.palette[targetColorId].count) {
+                    renderPalettePanel();
+                    showToast(`Completed all of Color #${targetColorId+1}!`, "success");
+                    checkForMasterpieceCompletion();
+                } else {
+                    renderPalettePanel();
+                }
+            }
+        }
+
+        function updateProgressHUD() {
+            const totalMaxGems = state.gridSize * state.gridSize;
+            let placedCount = 0;
+
+            state.palette.forEach(color => {
+                placedCount += color.placed;
+            });
+
+            const percent = totalMaxGems > 0 ? Math.floor((placedCount / totalMaxGems) * 100) : 0;
+            
+            // Sync Desktop Stats
+            document.getElementById('overallPercent').innerText = `${percent}%`;
+            document.getElementById('overallProgressBar').style.width = `${percent}%`;
+            document.getElementById('placedGemsText').innerText = `${placedCount.toLocaleString()} / ${totalMaxGems.toLocaleString()} Gems`;
+            document.getElementById('remainingGemsText').innerText = `${(totalMaxGems - placedCount).toLocaleString()} Left`;
+
+            // Sync Mobile Top HUD Stats
+            document.getElementById('mobilePercent').innerText = `${percent}%`;
+            document.getElementById('mobileGemsCount').innerText = `${placedCount.toLocaleString()} / ${totalMaxGems.toLocaleString()} Gems`;
+        }
+
+        function checkForMasterpieceCompletion() {
+            const totalMaxGems = state.gridSize * state.gridSize;
+            let placedCount = 0;
+
+            state.palette.forEach(color => {
+                placedCount += color.placed;
+            });
+
+            if (placedCount === totalMaxGems && !state.isArtFinished) {
+                state.isArtFinished = true;
+                playSuccessSound();
+
+                document.getElementById('winTotalGems').innerText = totalMaxGems.toLocaleString();
+                document.getElementById('winTotalColors').innerText = state.palette.length;
+                
+                const winOverlay = document.getElementById('winOverlay');
+                winOverlay.classList.remove('pointer-events-none');
+                winOverlay.classList.remove('opacity-0');
+
+                // Final project sync upon finishing
+                saveProjectToCloud(false);
+            }
+        }
+
+        // ----------------- Export Completed Work -----------------
+        document.getElementById('btnShareFinished').addEventListener('click', () => {
+            const exportCanvas = document.createElement('canvas');
+            const expSize = 2048;
+            exportCanvas.width = expSize;
+            exportCanvas.height = expSize;
+            const expCtx = exportCanvas.getContext('2d');
+
+            const scale = expSize / state.gridSize;
+
+            expCtx.fillStyle = '#0f172a';
+            expCtx.fillRect(0, 0, expSize, expSize);
+
+            for (let y = 0; y < state.gridSize; y++) {
+                for (let x = 0; x < state.gridSize; x++) {
+                    const colorId = state.gridData[y][x];
+                    const colorObj = state.palette[colorId];
+                    drawDiamondGem(expCtx, x * scale, y * scale, scale, colorObj.hex);
+                }
+            }
+
+            const url = exportCanvas.toDataURL('image/png');
+            const link = document.createElement('a');
+            link.download = 'My_Diamond_Art_Studio.png';
+            link.href = url;
+            link.click();
+            showToast("Successfully generated and saved artwork!", "success");
+        });
+
+        // --- Mobile Settings/Helpers Modal Logic ---
+        const helpersModal = document.getElementById('helpersModal');
+        const helpersContent = document.getElementById('helpersContent');
+        const btnHelperToggle = document.getElementById('btnHelperToggle');
+        const btnCloseHelpers = document.getElementById('btnCloseHelpers');
+
+        btnHelperToggle.addEventListener('click', () => {
+            helpersModal.classList.remove('opacity-0', 'pointer-events-none');
+            helpersContent.classList.remove('translate-y-10');
+        });
+
+        function closeHelpers() {
+            helpersModal.classList.add('opacity-0', 'pointer-events-none');
+            helpersContent.classList.add('translate-y-10');
+        }
+
+        btnCloseHelpers.addEventListener('click', closeHelpers);
+        helpersModal.addEventListener('click', (e) => {
+            if (e.target === helpersModal) closeHelpers();
+        });
+
+        // Initialize Firebase on document load
+        window.addEventListener('DOMContentLoaded', () => {
+            initFirebase();
+        });
+    </script>
+</body>
+</html>
